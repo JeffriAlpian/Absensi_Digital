@@ -114,9 +114,13 @@ if (mysqli_num_rows($cek) == 0) {
                          VALUES ('$siswa_id', '$tanggal', '$jam', '$status')");
 
     // Buat pesan WA untuk "MASUK"
-    $pesan = "Halo, Orang tua/wali dari $nama.\n\n"
-           . "Siswa telah melakukan ABSENSI MASUK pada "
-           . date("d-m-Y H:i");
+    $pesan = "Assalamualaikum Wr. Wb.\n\n"
+            . "Orang tua/wali dari $nama.\n\n"
+            . "Siswa/i telah melakukan *ABSENSI MASUK* pada "
+            . date("d-m-Y H:i")
+            . "\n\nMohon doanya selalu agar ananda dimudahkan dalam belajar dan beraktivitas."
+            . "\nAtas Perhatian-nya Terimakasih."
+            . "\n\nWassalamualaikum Wr. Wb.";
            
     // Kirim WA
     $wa_status = kirim_wa($conn, $no_wa, $pesan);
@@ -146,7 +150,7 @@ if (mysqli_num_rows($cek) == 0) {
 
     // 2b. Cek "Gerbang Waktu Pulang"
     // ⚠️ Pastikan Anda punya tabel 'jam_absensi' dan sudah diisi
-    $q_jam_pulang = mysqli_query($conn, "SELECT jam_pulang FROM jam_absensi LIMIT 1");
+    $q_jam_pulang = mysqli_query($conn, "SELECT jam_pulang FROM absensi LIMIT 1");
     $jam_pulang_minimal = "14:00:00"; // Waktu default jika tabel jam_absensi kosong
     
     if ($q_jam_pulang && mysqli_num_rows($q_jam_pulang) > 0) {
@@ -168,9 +172,13 @@ if (mysqli_num_rows($cek) == 0) {
     mysqli_query($conn, "UPDATE absensi SET jam_pulang = '$jam' WHERE id = '$absen_id'");
 
     // Buat pesan WA untuk "PULANG"
-    $pesan = "Halo, Orang tua/wali dari $nama.\n\n"
-           . "Siswa telah melakukan ABSENSI PULANG pada "
-           . date("d-m-Y H:i");
+    $pesan = "Assalamualaikum Wr. Wb.\n\n"
+            . "Orang tua/wali dari $nama.\n\n"
+            . "Siswa/i telah melakukan *ABSENSI PULANG* pada "
+            . date("d-m-Y H:i")
+            . "\n\nMohon doanya selalu agar ananda dimudahkan dalam belajar dan beraktivitas."
+            . "\nAtas perhatian-nya kami ucapkan terimakasih."
+            . "\n\nWassalamualaikum Wr. Wb.";
            
     // Kirim WA
     $wa_status = kirim_wa($conn, $no_wa, $pesan);

@@ -1,4 +1,4 @@
-# Aplikasi Absensi Sekolah Berbasis QR Code v4.00
+# Aplikasi Absensi Sekolah Berbasis QR Code
 
 Aplikasi web sederhana untuk mengelola absensi siswa di sekolah menggunakan pemindaian QR Code, dengan notifikasi WhatsApp otomatis ke orang tua dan berbagai fitur pelaporan.
 

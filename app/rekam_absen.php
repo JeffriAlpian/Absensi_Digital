@@ -22,7 +22,7 @@ if (isset($_GET['nisn'])) {
     }
 
     // Ambil data siswa
-    $siswa = mysqli_query($conn, "SELECT * FROM siswa WHERE nisn='$nisn'");
+    $siswa = mysqli_query($conn, "SELECT *, k.nama_kelas FROM siswa s JOIN kelas k ON s.id_kelas = k.id WHERE nisn='$nisn'");
     if (mysqli_num_rows($siswa) == 0) {
         echo json_encode(["message" => "❌ Siswa tidak ditemukan."]);
         exit;
@@ -39,7 +39,14 @@ if (isset($_GET['nisn'])) {
     }
 
     // Pesan WA
-    $pesan = "Halo, {$s['nama']} dari kelas {$s['kelas']} sudah hadir pada $tanggal jam $jam.";
+    $pesan = "Assalamualaikum Wr. Wb.\n\n"
+            . "Orang tua/wali dari $nama.\n\n"
+            . "Siswa/i telah melakukan *ABSENSI MASUK* pada "
+            . date("d-m-Y H:i")
+            . "\n\nMohon doanya selalu agar ananda dimudahkan dalam belajar dan beraktivitas."
+            . "\nAtas perhatian-nya kami ucapkan terimakasih."
+            . "\n\nWassalamualaikum Wr. Wb.";
+
     $waLink = !empty($no_wa) ? "https://wa.me/$no_wa?text=" . urlencode($pesan) : "";
 
     // Cek absen

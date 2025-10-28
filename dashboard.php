@@ -12,65 +12,7 @@ $user_role = $_SESSION['role'];
 
 include "app/config.php";
 
-// --- MULAI BLOK YANG DIPINDAHKAN ---
-// Ambil variabel 'page' dan 'action' di sini
-$halaman = isset($_GET['page']) ? $_GET['page'] : 'home';
-$action = $_GET['action'] ?? '';
 
-// Cek JIKA HALAMANNYA 'export' DAN ACTIONNYA 'export'
-if ($halaman == 'export' && $action == 'export') {
-
-  // Ambil semua parameter dari URL
-  $bulan_awal = $_GET['bulan_awal'] ?? date('m');
-  $tahun_awal = $_GET['tahun_awal'] ?? date('Y');
-  $bulan_akhir = $_GET['bulan_akhir'] ?? date('m');
-  $tahun_akhir = $_GET['tahun_akhir'] ?? date('Y');
-  $kelas = $_GET['kelas'] ?? '';
-
-  // ==== MODE EXPORT EXCEL ====
-  $kelasNama = ($kelas != '') ? $kelas : "semua";
-  $filename = "absensi_{$kelasNama}_{$bulan_awal}-{$tahun_awal}_sampai_{$bulan_akhir}-{$tahun_akhir}.xls";
-
-  // Header untuk download file Excel (Sekarang ini dieksekusi SEBELUM HTML)
-  header("Content-Type: application/vnd.ms-excel");
-  header("Content-Disposition: attachment; filename=\"$filename\""); // <-- Ini baris 21 lama Anda
-
-  // Tentukan tanggal awal & akhir
-  $tanggal_awal  = date("Y-m-01", strtotime("$tahun_awal-$bulan_awal-01"));
-  $tanggal_akhir = date("Y-m-t", strtotime("$tahun_akhir-$bulan_akhir-01"));
-
-  // Query ambil data absensi join siswa
-  $query = "SELECT a.tanggal, a.jam, a.status, a.keterangan, 
-                     s.nis, s.nisn, s.nama, s.kelas
-                FROM absensi a
-                JOIN siswa s ON a.siswa_id = s.id
-                WHERE a.tanggal BETWEEN '$tanggal_awal' AND '$tanggal_akhir'
-                  AND s.status='aktif'";
-  if ($kelas != '') {
-    $query .= " AND s.kelas = '$kelas'";
-  }
-  $query .= " ORDER BY a.tanggal, s.nama";
-
-  $result = mysqli_query($conn, $query);
-
-  // Cetak header kolom
-  echo "Tanggal\tNIS\tNISN\tNama\tKelas\tJam\tStatus\tKeterangan\n";
-
-  // Cetak data baris per baris
-  while ($row = mysqli_fetch_assoc($result)) {
-    echo $row['tanggal'] . "\t" .
-      $row['nis'] . "\t" .
-      $row['nisn'] . "\t" .
-      $row['nama'] . "\t" .
-      $row['kelas'] . "\t" .
-      $row['jam'] . "\t" .
-      $row['status'] . "\t" .
-      $row['keterangan'] . "\n";
-  }
-  // SANGAT PENTING: Hentikan script di sini agar HTML dashboard tidak ikut terkirim
-  exit;
-}
-// --- SELESAI BLOK YANG DIPINDAHKAN ---
 
 // Ambil parameter halaman, default 'home' jika tidak ada
 $halaman = isset($_GET['page']) ? $_GET['page'] : 'home';
@@ -232,8 +174,14 @@ switch ($halaman) {
                   lg:static lg:translate-x-0">
 
       <div class="p-4 border-b flex items-center justify-center gap-3">
-        <i class="fa-solid fa-qrcode text-green-600 text-2xl"></i>
-        <h2 class="text-xl font-bold text-gray-800">Admin Menu</h2>
+        <?php 
+        $profil = mysqli_fetch_assoc(mysqli_query($conn, "SELECT nama_sekolah, logo FROM profil_sekolah LIMIT 1"));
+        $nama_sekolah = $profil['nama_sekolah'] ?? 'Nama Sekolah';
+        $logo = $profil['logo'] ?? 'default.png'; 
+        ?>
+
+        <img src="uploads/<?= htmlspecialchars($logo); ?>" alt="Logo Sekolah" class="mx-auto h-16 mb-2">
+        <h2 class="text-l font-bold text-gray-800"><?= htmlspecialchars($nama_sekolah); ?></h2>
       </div>
 
       <nav class="flex-1 overflow-y-auto p-4">
@@ -244,9 +192,9 @@ switch ($halaman) {
             // Menu Umum (Admin & Guru)
             ['page' => 'home',          'icon' => 'fa-home',                'text' => 'Dashboard',          'roles' => ['admin', 'guru']],
             ['page' => 'siswa',         'icon' => 'fa-user-graduate',       'text' => 'Data Siswa',         'roles' => ['admin', 'guru']],
-            ['page' => 'scan',          'icon' => 'fa-qrcode',              'text' => 'SCAN QR',            'roles' => ['admin', 'guru']],
-            ['page' => 'scan_wa',       'icon' => 'fa-qrcode',              'text' => 'SCAN QR + WA Manual', 'roles' => ['admin', 'guru']],
-            ['page' => 'scan_wa_api',   'icon' => 'fa-qrcode',              'text' => 'SCAN QR + WA API',   'roles' => ['admin', 'guru']], // Guru mungkin perlu ini?
+            // ['page' => 'scan',          'icon' => 'fa-qrcode',              'text' => 'SCAN QR',            'roles' => ['admin', 'guru']],
+            // ['page' => 'scan_wa',       'icon' => 'fa-qrcode',              'text' => 'SCAN QR + WA Manual', 'roles' => ['admin', 'guru']],
+            ['page' => 'scan_wa_api',   'icon' => 'fa-qrcode',              'text' => 'SCAN QR',   'roles' => ['admin', 'guru']], // Guru mungkin perlu ini?
             ['page' => 'belum_absensi', 'icon' => 'fa-user-clock',          'text' => 'Siswa Belum Hadir',  'roles' => ['admin', 'guru']], // Ganti ikon
             ['page' => 'absensi',       'icon' => 'fa-clipboard-check',     'text' => 'Isi S/I/A',          'roles' => ['admin', 'guru']],
             ['page' => 'rekap_bulanan', 'icon' => 'fa-calendar-days',       'text' => 'Rekap Bulanan',      'roles' => ['admin', 'guru']],

@@ -1,6 +1,6 @@
 <?php
 
-$kelasList = mysqli_query($conn, "SELECT DISTINCT kelas FROM siswa ORDER BY kelas");
+$kelasList = mysqli_query($conn, "SELECT DISTINCT id_kelas, k.nama_kelas FROM siswa s JOIN kelas k ON s.id_kelas = k.id ORDER BY id_kelas");
 
 // Default bulan & tahun
 $bulan_awal = $_GET['bulan_awal'] ?? date('m');
@@ -11,12 +11,6 @@ $kelas = $_GET['kelas'] ?? '';
 
 ?>
 
-<header class="bg-green-600 text-white p-4 shadow-md relative text-center lg:text-center">
-    <button id="menu-toggle" class="lg:hidden absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-white">
-        <i class="fa-solid fa-bars fa-fw text-xl"></i>
-    </button>
-    <h1 class="text-2xl lg:text-3xl font-bold">Export Laporan</h1>
-</header>
 
 <div class="flex-1 p-6">
     
@@ -24,7 +18,7 @@ $kelas = $_GET['kelas'] ?? '';
 
         <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">Export Absensi ke Excel</h2>
 
-        <form method="get" class="space-y-6">
+        <form method="post" action="app/export_rekap.php" class="space-y-6">
             <input type="hidden" name="page" value="export">
             <input type="hidden" name="action" value="export">
 
@@ -32,12 +26,12 @@ $kelas = $_GET['kelas'] ?? '';
                 <label for="kelas" class="block text-sm font-medium text-gray-700 mb-1">
                     Pilih Kelas
                 </label>
-                <select id="kelas" name="kelas" class="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm">
+                <select id="kelas" name="id_kelas" class="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm">
                     <option value="">Semua Kelas</option>
                     <?php while ($k = mysqli_fetch_assoc($kelasList)) {
-                        $sel = ($k['kelas'] == $kelas) ? 'selected' : '';
+                        $sel = ($k['nama_kelas'] == $kelas) ? 'selected' : '';
                     ?>
-                        <option value="<?= htmlspecialchars($k['kelas']) ?>" <?= $sel ?>><?= htmlspecialchars($k['kelas']) ?></option>
+                        <option value="<?= htmlspecialchars($k['id_kelas']) ?>" <?= $sel ?>><?= htmlspecialchars($k['nama_kelas']) ?></option>
                     <?php } ?>
                 </select>
             </div>
