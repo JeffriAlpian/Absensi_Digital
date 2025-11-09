@@ -25,10 +25,10 @@ if (isset($_POST['hapus_data_dengan_password'])) {
         // 2. Verifikasi password
         // !!! PENTING: Ini menggunakan md5() agar konsisten dengan sistem Anda.
         // Ganti ke password_verify() jika Anda sudah upgrade ke password_hash()
-        $is_password_correct = (md5($password_input) === $admin_password_hash);
+        // $is_password_correct = (md5($password_input) === $admin_password_hash);
         
         // --- (Jika Anda sudah upgrade ke password_hash(), gunakan ini) ---
-        // $is_password_correct = password_verify($password_input, $admin_password_hash);
+        $is_password_correct = password_verify($password_input, $admin_password_hash);
         
         if ($is_password_correct) {
             // === PASSWORD BENAR ===

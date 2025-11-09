@@ -9,7 +9,8 @@ header('Content-Type: application/json');
 // ------------------------------------------------------------------
 // ⚙️ FUNGSI UNTUK MENGIRIM WA (Saya pindahkan ke fungsi agar rapi)
 // ------------------------------------------------------------------
-function kirim_wa($conn, $no_wa, $pesan) {
+function kirim_wa($conn, $no_wa, $pesan)
+{
     // 🔧 Normalisasi nomor WA
     $no_wa = preg_replace('/[^0-9]/', '', $no_wa); // hanya angka
     if (substr($no_wa, 0, 1) === "0") {
@@ -35,7 +36,7 @@ function kirim_wa($conn, $no_wa, $pesan) {
     if (empty($secretKey)) {
         return "⚠️ Secret key WA tidak ditemukan di tabel profil_sekolah.";
     }
-    
+
     $data = [
         'phone' => $no_wa,  // format +628xxxx
         'message' => $pesan
@@ -79,7 +80,7 @@ if (!isset($_GET['nisn'])) {
 $nisn = $_GET['nisn'];
 
 // 🔎 Cari data siswa + nomor WA
-$sql = "SELECT id, nama, no_wa FROM siswa WHERE nisn='$nisn' LIMIT 1";
+$sql = "SELECT id, nama, id_kelas, no_wa FROM siswa WHERE nisn='$nisn' LIMIT 1";
 $res = mysqli_query($conn, $sql);
 
 if (!$res || mysqli_num_rows($res) == 0) {
@@ -90,6 +91,7 @@ if (!$res || mysqli_num_rows($res) == 0) {
 $s = mysqli_fetch_assoc($res);
 $siswa_id = $s['id'];
 $nama     = $s['nama'];
+$kelas     = $s['id_kelas'];
 $no_wa    = $s['no_wa'] ?? '';
 
 // Siapkan variabel waktu
@@ -108,37 +110,69 @@ $cek = mysqli_query($conn, $sql_cek);
 if (mysqli_num_rows($cek) == 0) {
     // === [LOGIKA 1: ABSEN MASUK] ===
     // Belum ada data, ini adalah Absen Masuk.
-    
-    $status  = "H"; // Hadir
-    mysqli_query($conn, "INSERT INTO absensi (siswa_id, tanggal, jam, status) 
+    $q_jam_masuk = mysqli_query($conn, "SELECT jam_masuk FROM kelas WHERE id = '$kelas' LIMIT 1");
+    $jam_masuk_maximal = "08:00:00"; // Waktu default jika tabel jam_absensi kosong
+
+    if ($q_jam_masuk && mysqli_num_rows($q_jam_masuk) > 0) {
+        $d_jam = mysqli_fetch_assoc($q_jam_masuk);
+        if (!empty($d_jam['jam_masuk'])) {
+            $jam_masuk_maximal = $d_jam['jam_masuk'];
+        }
+    }
+
+    // Cek apakah terlambat
+    if ($jam > $jam_masuk_maximal) {
+        $status  = "H"; // Hadir
+        mysqli_query($conn, "INSERT INTO absensi (siswa_id, tanggal, jam, status, keterangan) 
+                             VALUES ('$siswa_id', '$tanggal', '$jam', '$status', 'Terlambat')");
+
+        echo json_encode([
+            "message" => "⚠️ Maaf, $nama terlambat absen MASUK (setelah jam $jam_masuk_maximal)."
+        ]);
+
+        $pesan = "Assalamualaikum Wr. Wb.\n\n"
+            . "Orang tua/wali dari $nama.\n\n"
+            . "Siswa/i telah melakukan *ABSENSI MASUK (TERLAMBAT)* pada "
+            . date("d-m-Y H:i")
+            . "\n\nMohon doanya selalu agar ananda dimudahkan dalam belajar dan beraktivitas."
+            . "\nAtas Perhatian-nya Terimakasih."
+            . "\n\nWassalamualaikum Wr. Wb.";
+
+        // Kirim WA
+        $wa_status = kirim_wa($conn, $no_wa, $pesan);
+        exit;
+    } else {
+
+        $status  = "H"; // Hadir
+        mysqli_query($conn, "INSERT INTO absensi (siswa_id, tanggal, jam, status) 
                          VALUES ('$siswa_id', '$tanggal', '$jam', '$status')");
 
-    // Buat pesan WA untuk "MASUK"
-    $pesan = "Assalamualaikum Wr. Wb.\n\n"
+        // Buat pesan WA untuk "MASUK"
+        $pesan = "Assalamualaikum Wr. Wb.\n\n"
             . "Orang tua/wali dari $nama.\n\n"
             . "Siswa/i telah melakukan *ABSENSI MASUK* pada "
             . date("d-m-Y H:i")
             . "\n\nMohon doanya selalu agar ananda dimudahkan dalam belajar dan beraktivitas."
             . "\nAtas Perhatian-nya Terimakasih."
             . "\n\nWassalamualaikum Wr. Wb.";
-           
-    // Kirim WA
-    $wa_status = kirim_wa($conn, $no_wa, $pesan);
 
-    // Balikan ke frontend
-    echo json_encode([
-        "message" => "✅ ABSEN MASUK $nama berhasil dicatat pada jam $jam_absen.<br>$wa_status"
-    ]);
-    exit;
+        // Kirim WA
+        $wa_status = kirim_wa($conn, $no_wa, $pesan);
 
+        // Balikan ke frontend
+        echo json_encode([
+            "message" => "✅ ABSEN MASUK $nama berhasil dicatat pada jam $jam_absen.<br>$wa_status"
+        ]);
+        exit;
+    }
 } else {
     // === [LOGIKA 2: ABSEN PULANG] ===
     // Sudah ada data, ini adalah percobaan Absen Pulang.
-    
+
     $row_absen = mysqli_fetch_assoc($cek);
     $absen_id = $row_absen['id'];
     $jam_masuk = $row_absen['jam'];
-    
+
     // 2a. Cek apakah jam pulang sudah terisi?
     if ($row_absen['jam_pulang'] != NULL) {
         $jam_pulang = $row_absen['jam_pulang'];
@@ -150,13 +184,13 @@ if (mysqli_num_rows($cek) == 0) {
 
     // 2b. Cek "Gerbang Waktu Pulang"
     // ⚠️ Pastikan Anda punya tabel 'jam_absensi' dan sudah diisi
-    $q_jam_pulang = mysqli_query($conn, "SELECT jam_pulang FROM absensi LIMIT 1");
+    $q_jam_pulang = mysqli_query($conn, "SELECT jam_pulang FROM kelas WHERE id = '$kelas' LIMIT 1");
     $jam_pulang_minimal = "14:00:00"; // Waktu default jika tabel jam_absensi kosong
-    
+
     if ($q_jam_pulang && mysqli_num_rows($q_jam_pulang) > 0) {
         $d_jam = mysqli_fetch_assoc($q_jam_pulang);
         if (!empty($d_jam['jam_pulang'])) {
-             $jam_pulang_minimal = $d_jam['jam_pulang'];
+            $jam_pulang_minimal = $d_jam['jam_pulang'];
         }
     }
 
@@ -173,13 +207,13 @@ if (mysqli_num_rows($cek) == 0) {
 
     // Buat pesan WA untuk "PULANG"
     $pesan = "Assalamualaikum Wr. Wb.\n\n"
-            . "Orang tua/wali dari $nama.\n\n"
-            . "Siswa/i telah melakukan *ABSENSI PULANG* pada "
-            . date("d-m-Y H:i")
-            . "\n\nMohon doanya selalu agar ananda dimudahkan dalam belajar dan beraktivitas."
-            . "\nAtas perhatian-nya kami ucapkan terimakasih."
-            . "\n\nWassalamualaikum Wr. Wb.";
-           
+        . "Orang tua/wali dari $nama.\n\n"
+        . "Siswa/i telah melakukan *ABSENSI PULANG* pada "
+        . date("d-m-Y H:i")
+        . "\n\nMohon doanya selalu agar ananda dimudahkan dalam belajar dan beraktivitas."
+        . "\nAtas perhatian-nya kami ucapkan terimakasih."
+        . "\n\nWassalamualaikum Wr. Wb.";
+
     // Kirim WA
     $wa_status = kirim_wa($conn, $no_wa, $pesan);
 
@@ -189,4 +223,3 @@ if (mysqli_num_rows($cek) == 0) {
     ]);
     exit;
 }
-?>

@@ -1,11 +1,25 @@
 <?php
 session_start();
 // [DIUBAH] Cek apakah user login dan rolenya admin atau guru
-if (!isset($_SESSION['username']) || !in_array($_SESSION['role'], ['admin', 'guru'])) {
-  // Jika tidak, redirect ke halaman login
-  header("Location: index.php"); // Asumsi login di index.php
+// Set session timeout to 1 hour (3600 seconds)
+$timeout = 3600;
+
+// Cek login dan role
+if (!isset($_SESSION['username']) || !isset($_SESSION['role']) || !in_array($_SESSION['role'], ['admin', 'guru'])) {
+  header("Location: index.php");
   exit;
 }
+
+// Cek inactivity timeout
+if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > $timeout)) {
+  session_unset();
+  session_destroy();
+  header("Location: index.php?timeout=1");
+  exit;
+}
+
+// Update last activity timestamp
+$_SESSION['last_activity'] = time();
 
 // Simpan role user untuk digunakan nanti
 $user_role = $_SESSION['role'];
@@ -31,6 +45,12 @@ switch ($halaman) {
     break;
   case 'scan':
     $page_title = 'Scan QR Code';
+    break;
+  case 'tambah_rfid':
+    $page_title = 'Tambah RFID Siswa';
+    break;
+  case 'device_rfid':
+    $page_title = 'Tambah Device RFID';
     break;
   case 'scan_wa':
     $page_title = 'Scan QR + WA Manual';
@@ -155,6 +175,11 @@ switch ($halaman) {
 
 <body class="flex flex-col h-screen font-sans bg-gray-100 overflow-hidden">
 
+  <div class="bg-green-500 absolute bottom-4 right-4 p-3 rounded-full shadow-lg z-50 md:hidden flex items-center justify-center hover:bg-green-600 transition-colors duration-200">
+    <a href="?page=scan_wa_api"><i class="fa-solid fa-qrcode text-white w-10 h-10 text-3xl text-center flex items-center justify-center"></i></a>
+
+  </div>
+
   <div class="bg-orange-500 overflow-hidden whitespace-nowrap box-border py-2.5">
     <span class="inline-block pl-full animate-marquee text-white font-bold text-base">
       Kehadiran Bapak/Ibu Guru membersamai siswa belajar tidak akan pernah dapat digantikan oleh Robot AI
@@ -174,10 +199,10 @@ switch ($halaman) {
                   lg:static lg:translate-x-0">
 
       <div class="p-4 border-b flex items-center justify-center gap-3">
-        <?php 
+        <?php
         $profil = mysqli_fetch_assoc(mysqli_query($conn, "SELECT nama_sekolah, logo FROM profil_sekolah LIMIT 1"));
         $nama_sekolah = $profil['nama_sekolah'] ?? 'Nama Sekolah';
-        $logo = $profil['logo'] ?? 'default.png'; 
+        $logo = $profil['logo'] ?? 'default.png';
         ?>
 
         <img src="uploads/<?= htmlspecialchars($logo); ?>" alt="Logo Sekolah" class="mx-auto h-16 mb-2">
@@ -195,6 +220,8 @@ switch ($halaman) {
             // ['page' => 'scan',          'icon' => 'fa-qrcode',              'text' => 'SCAN QR',            'roles' => ['admin', 'guru']],
             // ['page' => 'scan_wa',       'icon' => 'fa-qrcode',              'text' => 'SCAN QR + WA Manual', 'roles' => ['admin', 'guru']],
             ['page' => 'scan_wa_api',   'icon' => 'fa-qrcode',              'text' => 'SCAN QR',   'roles' => ['admin', 'guru']], // Guru mungkin perlu ini?
+            ['page' => 'tambah_rfid',   'icon' => 'fa-address-card',              'text' => 'Tambah RFID Siswa',   'roles' => ['admin']], 
+            ['page' => 'device_rfid',   'icon' => 'fa-desktop',             'text' => 'Tambah Device RFID',  'roles' => ['admin']], 
             ['page' => 'belum_absensi', 'icon' => 'fa-user-clock',          'text' => 'Siswa Belum Hadir',  'roles' => ['admin', 'guru']], // Ganti ikon
             ['page' => 'absensi',       'icon' => 'fa-clipboard-check',     'text' => 'Isi S/I/A',          'roles' => ['admin', 'guru']],
             ['page' => 'rekap_bulanan', 'icon' => 'fa-calendar-days',       'text' => 'Rekap Bulanan',      'roles' => ['admin', 'guru']],
@@ -292,9 +319,11 @@ switch ($halaman) {
           case 'scan_wa':
             include $app_path . 'scan_wa.php';
             break;
-          // ... (case lain sama persis) ...
           case 'scan_wa_api':
             include $app_path . 'scan_wa_api.php';
+            break;
+          case 'tambah_rfid':
+            include $app_path . 'tambah_rfid.php';
             break;
           case 'key_wa_sidobe':
             include $app_path . 'key_wa_sidobe.php';
@@ -364,6 +393,9 @@ switch ($halaman) {
             break;
           case 'cek_update':
             include $app_path . 'cek_update.php';
+            break;
+          case 'device_rfid':
+            include $app_path . 'device_rfid.php';
             break;
           case 'riwayat':
             include $app_path . 'riwayat.php';

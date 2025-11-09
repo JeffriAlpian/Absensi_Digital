@@ -5,6 +5,8 @@ $pesan_tipe = "sukses"; // 'sukses' atau 'gagal'
 // Tambah kelas
 if (isset($_POST['simpan'])) {
     $nama_kelas = mysqli_real_escape_string($conn, trim($_POST['nama_kelas']));
+    $jam_masuk = mysqli_real_escape_string($conn, trim($_POST['jam_masuk']));
+    $jam_pulang = mysqli_real_escape_string($conn, trim($_POST['jam_pulang']));
 
     if (empty($nama_kelas)) {
         $pesan = "Nama kelas tidak boleh kosong.";
@@ -17,8 +19,8 @@ if (isset($_POST['simpan'])) {
         $result = $cek->get_result();
 
         if ($result->num_rows == 0) {
-            $stmt = $conn->prepare("INSERT INTO kelas (nama_kelas) VALUES (?)");
-            $stmt->bind_param("s", $nama_kelas);
+            $stmt = $conn->prepare("INSERT INTO kelas (nama_kelas, jam_masuk, jam_pulang) VALUES (?,?,?)");
+            $stmt->bind_param("sss", $nama_kelas, $jam_masuk, $jam_pulang);
             if ($stmt->execute()) {
                 $pesan = "Kelas berhasil ditambahkan.";
                 $pesan_tipe = "sukses";
@@ -98,12 +100,20 @@ $btn_class = "inline-flex items-center justify-center px-4 py-2 border border-tr
         </div>
     <?php endif; ?>
 
-    <div class="bg-white p-6 rounded-lg shadow-md mb-6 max-w-lg">
+    <div class="bg-white p-6 rounded-lg shadow-md mb-6 scroll-mt-20">
         <h2 class="text-xl font-bold text-gray-800 mb-4">Tambah Kelas Baru</h2>
-        <form method="post" class="flex items-end gap-4">
+        <form method="post" class="flex flex-wrap items-end gap-4 ">
             <div class="flex-grow">
                 <label for="nama_kelas" class="block text-sm font-medium text-gray-700">Nama Kelas</label>
                 <input type="text" id="nama_kelas" name="nama_kelas" class="<?= $input_class ?>" placeholder="Contoh: 7A, 8B, 9C" required value="<?= htmlspecialchars($_POST['nama_kelas'] ?? '') ?>">
+            </div>
+            <div class="flex-grow">
+                <label for="jam_masuk" class="block text-sm font-medium text-gray-700">Jam Masuk</label>
+                <input type="time" id="jam_masuk" name="jam_masuk" class="<?= $input_class ?>" required value="<?= htmlspecialchars($_POST['jam_masuk'] ?? '') ?>">
+            </div>
+            <div class="flex-grow">
+                <label for="jam_pulang" class="block text-sm font-medium text-gray-700">Jam Pulang</label>
+                <input type="time" id="jam_pulang" name="jam_pulang" class="<?= $input_class ?>" required value="<?= htmlspecialchars($_POST['jam_pulang'] ?? '') ?>">
             </div>
             <button type="submit" name="simpan" class="<?= $btn_class ?> bg-green-600 hover:bg-green-700 focus:ring-green-500">
                 <i class="fa-solid fa-plus mr-2"></i>Tambah
@@ -121,6 +131,8 @@ $btn_class = "inline-flex items-center justify-center px-4 py-2 border border-tr
                     <tr>
                         <th class="px-4 py-3 text-center text-xs font-bold text-gray-600 uppercase tracking-wider w-1/12">No</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Nama Kelas</th>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Jam Masuk</th>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Jam Pulang</th>
                         <th class="px-4 py-3 text-center text-xs font-bold text-gray-600 uppercase tracking-wider w-1/5">Aksi</th>
                     </tr>
                 </thead>
@@ -136,6 +148,8 @@ $btn_class = "inline-flex items-center justify-center px-4 py-2 border border-tr
                         <tr class="hover:bg-gray-50">
                             <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-700 text-center"><?= $no++ ?></td>
                             <td class="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900"><?= htmlspecialchars($row['nama_kelas']) ?></td>
+                            <td class="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900"><?= htmlspecialchars($row['jam_masuk'] ?? '') ?></td>
+                            <td class="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900"><?= htmlspecialchars($row['jam_pulang'] ?? '') ?></td>
                             <td class="px-4 py-2 whitespace-nowrap text-sm text-center">
                                 <a href="?page=kelas&hapus=<?= $row['id'] ?>" class="<?= $btn_class ?> bg-red-600 hover:bg-red-700 focus:ring-red-500 !py-1.5 !px-3 !text-xs" onclick="return confirm('Yakin hapus kelas <?= htmlspecialchars($row['nama_kelas']) ?>? Pastikan tidak ada siswa atau wali di kelas ini.')">
                                     Hapus

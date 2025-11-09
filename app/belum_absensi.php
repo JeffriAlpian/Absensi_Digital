@@ -81,7 +81,7 @@ $btn_class = "inline-flex items-center justify-center px-3 py-1.5 border border-
             $siswaId = intval($d['id']); // Ambil ID siswa
 
             // Buat pesan dasar (akan dikirim ke PHP via AJAX)
-             $pesanDasar = "Assalamu'alaikum,\n\n"
+             $pesanDasar = "Assalamualaikum Wr. Wb.,\n\n"
               . "Kami informasikan bahwa ananda *{$namaSiswa}* "
               . "(NIS: {$nisSiswa}, Kelas: {$kelasSiswa}) "
               . "belum tercatat hadir pada tanggal *$tanggal*.\n\n" // Pastikan var $tanggal ada

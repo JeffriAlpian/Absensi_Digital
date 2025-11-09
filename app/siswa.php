@@ -20,13 +20,15 @@ if (isset($_POST['simpan'])) {
   $nis   = mysqli_real_escape_string($conn, $_POST['nis']);
   $nisn  = mysqli_real_escape_string($conn, $_POST['nisn']);
   $nama  = mysqli_real_escape_string($conn, $_POST['nama']);
+  $tempat_lahir  = mysqli_real_escape_string($conn, $_POST['tempat_lahir']);
+  $tanggal_lahir  = mysqli_real_escape_string($conn, $_POST['tanggal_lahir']);
   // [DIUBAH] Ambil id_kelas (angka)
   $id_kelas = intval($_POST['id_kelas']);
   $no_wa = mysqli_real_escape_string($conn, $_POST['no_wa']);
 
   // [DIUBAH] Simpan id_kelas, bukan 'kelas'
-  mysqli_query($conn, "INSERT INTO siswa (nis, nisn, nama, id_kelas, no_wa, status) 
-                         VALUES ('$nis', '$nisn', '$nama', $id_kelas, '$no_wa', 'aktif')");
+  mysqli_query($conn, "INSERT INTO siswa (nis, nisn, nama, tempat_lahir, tanggal_lahir, id_kelas, no_wa, status) 
+                         VALUES ('$nis', '$nisn', '$nama', $tempat_lahir, $tanggal_lahir, $id_kelas, '$no_wa', 'aktif')");
 
   // Buat akun user untuk siswa
   $username = $nisn;
@@ -54,6 +56,8 @@ if (isset($_POST['update'])) {
   $nis   = mysqli_real_escape_string($conn, $_POST['nis']);
   $nisn  = mysqli_real_escape_string($conn, $_POST['nisn']);
   $nama  = mysqli_real_escape_string($conn, $_POST['nama']);
+  $tempat_lahir  = mysqli_real_escape_string($conn, $_POST['tempat_lahir']);
+  $tanggal_lahir  = mysqli_real_escape_string($conn, $_POST['tanggal_lahir']);
   // [DIUBAH] Ambil id_kelas (angka)
   $id_kelas = intval($_POST['id_kelas']);
   $no_wa = mysqli_real_escape_string($conn, $_POST['no_wa']);
@@ -62,10 +66,17 @@ if (isset($_POST['update'])) {
   $old     = mysqli_fetch_assoc($res_old);
   $old_nisn = $old['nisn'] ?? $nisn;
 
-  // [DIUBAH] Update id_kelas, bukan 'kelas'
-  mysqli_query($conn, "UPDATE siswa 
-                         SET nis='$nis', nisn='$nisn', nama='$nama', id_kelas=$id_kelas, no_wa='$no_wa' 
-                         WHERE id=$id");
+  // Perbaiki query UPDATE: hilangkan koma ganda dan sertakan tempat/tanggal lahir
+  $update_sql = "UPDATE siswa
+                   SET nis='$nis',
+                       nisn='$nisn',
+                       nama='$nama',
+                       tempat_lahir='$tempat_lahir',
+                       tanggal_lahir='$tanggal_lahir',
+                       id_kelas=$id_kelas,
+                       no_wa='$no_wa'
+                 WHERE id=$id";
+  mysqli_query($conn, $update_sql);
 
   $new_password = password_hash($nisn, PASSWORD_BCRYPT); // Diganti ke hash yang aman
   mysqli_query($conn, "UPDATE users 
@@ -74,6 +85,13 @@ if (isset($_POST['update'])) {
 
   $qr_dir = "assets/qr/";
   if (!is_dir($qr_dir)) mkdir($qr_dir, 0777, true);
+
+  // Hapus QR lama jika nisn berubah
+  if (!empty($old_nisn) && $old_nisn !== $nisn) {
+    $old_qr = $qr_dir . $old_nisn . '.png';
+    if (file_exists($old_qr)) @unlink($old_qr);
+  }
+
   QRcode::png($nisn, $qr_dir . "$nisn.png", QR_ECLEVEL_L, 4);
 
   echo "<script>window.location.href = '?page=siswa';</script>";
@@ -105,7 +123,7 @@ $btn_dark = "bg-gray-800 hover:bg-gray-900 focus:ring-gray-700";
 $btn_danger_outline = "";
 $btn_success = "bg-blue-600 hover:bg-blue-700 focus:ring-blue-500"; // Sukses = Biru
 $btn_info = "bg-cyan-500 hover:bg-cyan-600 focus:ring-cyan-400";
-
+$btn_print = "bg-green-600 hover:bg-green-700 focus:ring-blue-500"; 
 // Helper untuk input form
 $input_class = "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm";
 ?>
@@ -118,21 +136,36 @@ $input_class = "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md sh
       <h2 class="text-xl font-bold text-gray-800 mb-4">
         <?= $edit_data ? 'Edit Data Siswa' : 'Tambah Siswa Baru' ?>
       </h2>
-      <form method="post" class="flex flex-wrap -mx-2 space-y-4 md:space-y-0">
-        <input type="hidden" name="id" value="<?= $edit_data['id'] ?? '' ?>">
+      <form method="post" class="flex flex-wrap gap-2 -mx-2 space-y-4 md:space-y-0">
+        <?php if ($edit_data): ?>
+          <input type="hidden" name="id" value="<?= intval($edit_data['id']) ?>">
+        <?php endif; ?>
 
-        <div class="w-1/2 md:w-1/6 px-2">
+        <div class="w-full md:w-1/3 px-2">
           <label for="nis" class="block text-sm font-medium text-gray-700">NIS</label>
-          <input type="number" id="nis" name="nis" class="<?= $input_class ?>" placeholder="NIS" required value="<?= htmlspecialchars($edit_data['nis'] ?? '') ?>">
+          <input type="text" id="nis" name="nis" class="<?= $input_class ?>" placeholder="NIS" required value="<?= htmlspecialchars($edit_data['nis'] ?? '') ?>">
         </div>
-        <div class="w-1/2 md:w-1/6 px-2">
+
+        <div class="w-full md:w-1/3 px-2">
           <label for="nisn" class="block text-sm font-medium text-gray-700">NISN</label>
           <input type="number" id="nisn" name="nisn" class="<?= $input_class ?>" placeholder="NISN" required value="<?= htmlspecialchars($edit_data['nisn'] ?? '') ?>">
         </div>
+
         <div class="w-full md:w-1/3 px-2">
           <label for="nama" class="block text-sm font-medium text-gray-700">Nama Lengkap</label>
           <input type="text" id="nama" name="nama" class="<?= $input_class ?>" placeholder="Nama Siswa" required value="<?= htmlspecialchars($edit_data['nama'] ?? '') ?>">
         </div>
+
+        <div class="w-full md:w-1/3 px-2">
+          <label for="tempat_lahir" class="block text-sm font-medium text-gray-700">Tempat Lahir</label>
+          <input type="text" id="tempat_lahir" name="tempat_lahir" class="<?= $input_class ?>" placeholder="Tempat Lahir" value="<?= htmlspecialchars($edit_data['tempat_lahir'] ?? '') ?>">
+        </div>
+
+        <div class="w-full md:w-1/3 px-2">
+          <label for="tanggal_lahir" class="block text-sm font-medium text-gray-700">Tanggal Lahir</label>
+          <input type="date" id="tanggal_lahir" name="tanggal_lahir" class="<?= $input_class ?>" value="<?= htmlspecialchars($edit_data['tanggal_lahir'] ?? '') ?>">
+        </div>
+
         <div class="w-1/2 md:w-1/6 px-2">
           <label for="id_kelas" class="block text-sm font-medium text-gray-700">Kelas</label>
           <select id="id_kelas" name="id_kelas" class="<?= $input_class ?>" required>
@@ -147,6 +180,7 @@ $input_class = "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md sh
             ?>
           </select>
         </div>
+
         <div class="w-1/2 md:w-1/6 px-2">
           <label for="no_wa" class="block text-sm font-medium text-gray-700">No. WhatsApp</label>
           <input type="text" id="no_wa" name="no_wa" class="<?= $input_class ?>" placeholder="628xxxx" value="<?= htmlspecialchars($edit_data['no_wa'] ?? '') ?>">
@@ -183,6 +217,9 @@ $input_class = "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md sh
     </form>
     <a href="app/cetak_kartu.php" class="<?= $btn_class ?> <?= $btn_success ?>" target="_blank">
       <i class="fa-solid fa-id-card mr-2"></i>Cetak Semua Kartu
+    </a>
+    <a href="app/backdesigncard.pdf" class="<?= $btn_class ?> <?= $btn_success ?>" target="_blank">
+      <i class="fa-solid fa-download mr-2"></i>Unduh Desain Belakang Kartu
     </a>
     <?php if ($user_role === 'admin') : ?>
       <a href="?page=import_siswa" class="<?= $btn_class ?> <?= $btn_success ?>">
@@ -253,12 +290,18 @@ $input_class = "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md sh
                   <img src="<?= $qr_src ?>" width="40" class="mx-auto border rounded">
                 </a>
               </td>
-              <?php if ($user_role === 'admin'): ?>
-                <td class="px-4 py-2 whitespace-nowrap text-sm text-center space-x-2">
+
+              <td class="px-4 py-2 whitespace-nowrap text-sm text-center">
+                <!-- Tombol Cetak selalu tampil -->
+                <a href="app/cetak_kartu_individu.php?siswa=<?= $row['id'] ?>" target="_blank" class="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md shadow-sm text-white <?= $btn_print ?>">Cetak</a>
+
+                <!-- Tombol Edit/Keluar hanya untuk admin -->
+                <?php if ($user_role === 'admin'): ?>
                   <a href="?page=siswa&edit=<?= $row['id'] ?>" class="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md shadow-sm text-white <?= $btn_info ?>">Edit</a>
                   <a href="?page=siswa&keluar=<?= $row['id'] ?>" class="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md shadow-sm text-white <?= $btn_warning ?>" onclick="return confirm('Yakin siswa ini keluar/lulus?')">Keluar</a>
-                </td>
-              <?php endif; ?>
+                <?php endif; ?>
+              </td>
+
             </tr>
           <?php } ?>
         </tbody>
@@ -313,6 +356,6 @@ $input_class = "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md sh
       }
 
       // Tampilkan data awal saat halaman dimuat (opsional, bisa hapus query awal di PHP jika ini dipakai)
-      fetchSiswa(''); 
+      fetchSiswa('');
     });
   </script>

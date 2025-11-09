@@ -89,9 +89,9 @@ if (isset($_POST['import'])) {
             $highestRow = $sheet->getHighestRow();
 
             // [DIUBAH] Siapkan prepared statement siswa dengan no_wa
-            $sql_siswa = "INSERT INTO siswa (nis, nisn, nama, id_kelas, no_wa, status)
-                          VALUES (?, ?, ?, ?, ?, 'aktif')
-                          ON DUPLICATE KEY UPDATE nama = VALUES(nama), id_kelas = VALUES(id_kelas), no_wa = VALUES(no_wa), status = 'aktif'";
+            $sql_siswa = "INSERT INTO siswa (nis, nisn, nama, tempat_lahir, tanggal_lahir, id_kelas, no_wa, status)
+                          VALUES (?, ?, ?, ?, ?, ?, ?, 'aktif')
+                          ON DUPLICATE KEY UPDATE nama = VALUES(nama), tempat_lahir = VALUES(tempat_lahir), tanggal_lahir = VALUES(tanggal_lahir), id_kelas = VALUES(id_kelas), no_wa = VALUES(no_wa), status = 'aktif'";
             $stmt_siswa = $conn->prepare($sql_siswa);
             if (!$stmt_siswa) {
                 throw new Exception("Gagal prepare statement siswa: " . $conn->error);
@@ -101,11 +101,40 @@ if (isset($_POST['import'])) {
             for ($row = 2; $row <= $highestRow; $row++) { // Asumsi baris 1 header
                 // [DIUBAH] Ambil data cell (sesuaikan PhpSpreadsheet/PHPExcel) + No WA (kolom E / index 4)
                 // PhpSpreadsheet
-                $nis       = trim($sheet->getCell('A' . $row)->getValue());
-                $nisn      = trim($sheet->getCell('B' . $row)->getValue());
-                $nama      = trim($sheet->getCell('C' . $row)->getValue());
-                $kelas_str = trim($sheet->getCell('D' . $row)->getValue());
-                $no_wa     = trim($sheet->getCell('E' . $row)->getValue()); // Ambil No WA
+                $nis       = trim($sheet->getCell('A' . $row)->getValue() ?? '');
+                $nisn      = trim($sheet->getCell('B' . $row)->getValue() ?? '');
+                $nama      = trim($sheet->getCell('C' . $row)->getValue() ?? '');
+                $tempat_lahir = trim($sheet->getCell('D' . $row)->getValue() ?? '');
+
+                // $tanggal_lahir = trim($sheet->getCell('E' . $row)->getValue() ?? '');
+
+                // Ambil nilai mentah dari Excel
+                $cellValue = $sheet->getCell('E' . $row)->getValue();
+
+                // Cek apakah ada nilai
+                if (!empty($cellValue)) {
+                    // Jika berupa angka serial (contoh 39719)
+                    if (is_numeric($cellValue)) {
+                        $timestamp = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToTimestamp($cellValue);
+                        $tanggal_lahir = date('Y-m-d', $timestamp);
+                    } else {
+                        // Jika berupa teks tanggal
+                        $timestamp = strtotime($cellValue);
+                        if ($timestamp !== false) {
+                            $tanggal_lahir = date('Y-m-d', $timestamp);
+                        } else {
+                            // Jika format aneh, simpan apa adanya
+                            $tanggal_lahir = trim((string)$cellValue);
+                        }
+                    }
+                } else {
+                    $tanggal_lahir = ''; // Kosongkan jika tidak ada tanggal
+                }
+
+                // Pastikan disimpan sebagai teks (string)
+                $tanggal_lahir = strval($tanggal_lahir);
+                $kelas_str = trim($sheet->getCell('F' . $row)->getValue() ?? '');
+                $no_wa     = trim($sheet->getCell('G' . $row)->getValue() ?? ''); // Ambil No WA
                 // PHPExcel
                 // $nis   = trim($sheet->getCellByColumnAndRow(0, $row)->getValue());
                 // $nisn  = trim($sheet->getCellByColumnAndRow(1, $row)->getValue());
@@ -173,7 +202,7 @@ if (isset($_POST['import'])) {
                 }
 
                 // [DIUBAH] Bind parameter siswa (sssis: string, string, string, integer, string)
-                $stmt_siswa->bind_param("sssis", $nis, $nisn, $nama, $id_kelas, $no_wa_valid);
+                $stmt_siswa->bind_param("sssssis", $nis, $nisn, $nama, $tempat_lahir, $tanggal_lahir, $id_kelas, $no_wa_valid);
 
                 if ($stmt_siswa->execute()) {
                     $berhasil++;
@@ -208,10 +237,6 @@ $input_class = "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md sh
 $btn_class = "inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-150";
 
 ?>
-
-<header class="bg-green-600 text-white p-4 shadow-md relative text-center lg:text-center">
-    <h1 class="text-2xl lg:text-3xl font-bold">Import Data Siswa dari Excel</h1>
-</header>
 
 <div class="flex-1 p-6">
 

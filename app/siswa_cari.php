@@ -1,7 +1,7 @@
 <?php
 // Sertakan config database (sesuaikan path jika perlu)
 // Asumsi config.php ada di level yang sama dengan dashboard.php
-require_once 'config.php'; 
+require_once 'config.php';
 session_start(); // Perlu session untuk cek role
 
 // [DIUBAH] Metode Keamanan: Cek Session Login
@@ -11,10 +11,10 @@ if (!isset($_SESSION['username'])) {
     // Jika tidak ada sesi, kirim respons error (bisa JSON atau HTML error)
     // dan hentikan skrip
     // die("Akses ditolak. Anda harus login."); 
-    
+
     // Atau kirim row tabel error untuk AJAX
     $user_role = ''; // Default role jika tidak login
-    $colspan = ($user_role === 'admin' ? 7 : 6); 
+    $colspan = ($user_role === 'admin' ? 7 : 6);
     echo "<tr><td colspan='$colspan' class='px-4 py-4 text-center text-red-500'>Akses ditolak. Sesi Anda mungkin sudah habis, silakan login kembali.</td></tr>";
     exit; // Hentikan eksekusi
 }
@@ -47,7 +47,7 @@ $stmt = $conn->prepare($sql);
 
 if (!$stmt) {
     // Error saat prepare query
-    echo "<tr><td colspan='".($user_role === 'admin' ? 7 : 6)."' class='px-4 py-4 text-center text-red-500'>Error: Query database gagal disiapkan.</td></tr>";
+    echo "<tr><td colspan='" . ($user_role === 'admin' ? 7 : 6) . "' class='px-4 py-4 text-center text-red-500'>Error: Query database gagal disiapkan.</td></tr>";
     exit;
 }
 
@@ -62,12 +62,13 @@ $result = $stmt->get_result();
 // Bangun output HTML
 $output = '';
 if ($result->num_rows == 0) {
-    $output = "<tr><td colspan='".($user_role === 'admin' ? 7 : 6)."' class='px-4 py-4 text-center text-gray-500'>Data siswa tidak ditemukan.</td></tr>";
+    $output = "<tr><td colspan='" . ($user_role === 'admin' ? 7 : 6) . "' class='px-4 py-4 text-center text-gray-500'>Data siswa tidak ditemukan.</td></tr>";
 } else {
     // Helper class (salin dari siswa.php jika perlu)
     $btn_info = "bg-cyan-500 hover:bg-cyan-600 focus:ring-cyan-400";
     $btn_warning = "bg-yellow-500 hover:bg-yellow-600 focus:ring-yellow-400";
-    
+    $btn_print = "bg-green-600 hover:bg-green-700 focus:ring-blue-500"; 
+
     while ($row = $result->fetch_assoc()) {
         $qr_file = "../assets/qr/{$row['nisn']}.png"; // Sesuaikan path relatif
         $qr_src = file_exists($qr_file) ? str_replace('../', '', $qr_file) : 'assets/qr/default.png'; // Path untuk src
@@ -84,13 +85,17 @@ if ($result->num_rows == 0) {
         $output .= '  </a>';
         $output .= '</td>';
 
+        $output .= '<td class="px-4 py-2 whitespace-nowrap text-sm text-center space-x-2">';
+        $output .= '<a href="app/cetak_kartu_individu.php?siswa=' . $row['id'] .'" target="_blank" class="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md shadow-sm text-white ' . $btn_print .'">Cetak</a>';
         // Kolom aksi hanya untuk admin
         if ($user_role === 'admin') {
-            $output .= '<td class="px-4 py-2 whitespace-nowrap text-sm text-center space-x-2">';
+
             $output .= '  <a href="?page=siswa&edit=' . $row['id'] . '" class="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md shadow-sm text-white ' . $btn_info . '">Edit</a>';
             $output .= '  <a href="?page=siswa&keluar=' . $row['id'] . '" class="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md shadow-sm text-white ' . $btn_warning . '" onclick="return confirm(\'Yakin siswa ini keluar/lulus?\')">Keluar</a>';
-            $output .= '</td>';
+            
         }
+        
+        $output .= '</td>';
         $output .= '</tr>';
     }
 }
@@ -100,4 +105,3 @@ $conn->close();
 
 // Keluarkan hasil HTML
 echo $output;
-?>
