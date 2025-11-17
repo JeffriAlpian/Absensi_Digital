@@ -4,8 +4,6 @@ Aplikasi manajemen absensi sekolah modern berbasis web (PHP Native) yang mengint
 
 Sistem ini dilengkapi dengan notifikasi WhatsApp otomatis ke orang tua/wali secara *real-time*, pelaporan PDF/Excel, serta dukungan perangkat IoT yang mampu bekerja dalam mode **Online** maupun **Offline**.
 
-![Dashboard Preview](https://via.placeholder.com/800x400?text=Preview+Dashboard+Absensi) *(Ganti dengan screenshot aplikasi Anda)*
-
 ## 🌟 Fitur Utama
 
 ### 1. Sistem Absensi Hybrid
