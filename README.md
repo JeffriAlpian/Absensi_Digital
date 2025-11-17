@@ -1,4 +1,4 @@
-# Aplikasi Absensi Sekolah v4.0 (QR Code, RFID & WhatsApp) 🏫
+# Aplikasi Absensi Sekolah v1 (QR Code, RFID & WhatsApp) 🏫
 
 Aplikasi manajemen absensi sekolah modern berbasis web (PHP Native) yang mengintegrasikan dua metode pencatatan kehadiran: **Digital (QR Code)** dan **Fisik (IoT RFID)**.
 
