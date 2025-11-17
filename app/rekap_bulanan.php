@@ -36,6 +36,9 @@ $bulan_int = intval($bulan);
 $tahun_int = intval($tahun);
 $kelas_int = intval($kelas);
 
+// [BARU] Ambil tanggal hari ini
+$tanggal_hari_ini = date('Y-m-d');
+
 $absensiQuery = "SELECT a.*, s.nis, s.nama, k.nama_kelas, s.id_kelas FROM absensi a 
                  JOIN siswa s ON a.siswa_id = s.id 
                  JOIN kelas k ON s.id_kelas = k.id 
@@ -59,8 +62,6 @@ while ($row = mysqli_fetch_assoc($resultAbsensi)) {
   ];
 }
 
-
-// (Sisa logika PHP Anda untuk libur, profil, wali kelas, dll...)
 // Ambil daftar hari libur dari database
 $libur = [];
 $queryLibur = mysqli_query($conn, "SELECT tanggal FROM hari_libur");
@@ -77,7 +78,13 @@ if ($kelas != '') {
     $wali_nip = $w['nip_wali'] ?? $wali_nip;
   }
 }
-$tanggal_terakhir = date("j F Y", strtotime("$tahun-$bulan-" . cal_days_in_month(CAL_GREGORIAN, $bulan, $tahun)));
+
+// Format tanggal untuk tanda tangan
+$tanggal_terakhir_obj = new DateTime("$tahun-$bulan-01");
+$tanggal_terakhir_obj->modify('last day of this month');
+// Atur locale ke Indonesia
+setlocale(LC_TIME, 'id_ID.UTF-8', 'id_ID', 'Indonesian');
+$tanggal_terakhir = strftime('%e %B %Y', $tanggal_terakhir_obj->getTimestamp());
 
 ?>
 
@@ -143,11 +150,11 @@ $tanggal_terakhir = date("j F Y", strtotime("$tahun-$bulan-" . cal_days_in_month
         <tr>
           <?php
           for ($i = 1; $i <= $jumlahHari; $i++) {
-            $tanggal = "$tahun-" . str_pad($bulan, 2, '0', STR_PAD_LEFT) . "-" . str_pad($i, 2, '0', STR_PAD_LEFT);
-            $day = date('w', strtotime($tanggal)); // 0 = Minggu, 5 = Jumat
+            $tanggal = sprintf("%04d-%02d-%02d", $tahun, $bulan, $i);
+            $day = date('w', strtotime($tanggal)); // 0 = Minggu 5 = Jumat
 
             // [FIX] Dikembalikan ke logika Jumat (5)
-            $class = ($day == 5) ? 'text-red-600' : '';
+            $class = ($day == 5 || in_array($tanggal, $libur)) ? 'text-red-600' : '';
             echo "<th class='px-1 py-2 w-5 $class'>$i</th>";
           }
           ?>
@@ -162,75 +169,82 @@ $tanggal_terakhir = date("j F Y", strtotime("$tahun-$bulan-" . cal_days_in_month
       <tbody class="bg-white divide-y divide-gray-200">
         <?php
         $no = 1;
-        mysqli_data_seek($siswaResult, 0); // Reset pointer
-        while ($siswa = mysqli_fetch_assoc($siswaResult)) {
-          $sid = $siswa['id'];
-          echo "<tr>";
-          echo "<td class='px-2 py-1 whitespace-nowrap text-center border border-gray-200'>$no</td>";
-          echo "<td class='px-2 py-1 whitespace-nowrap text-center border border-gray-200'>" . htmlspecialchars($siswa['nis']) . "</td>";
-          echo "<td class='px-2 py-1 whitespace-nowrap text-left font-medium text-gray-900 border border-gray-200'>" . htmlspecialchars($siswa['nama']) . "</td>";
+        if ($siswaResult && mysqli_num_rows($siswaResult) > 0) {
+            mysqli_data_seek($siswaResult, 0); // Reset pointer
+            while ($siswa = mysqli_fetch_assoc($siswaResult)) {
+                $sid = $siswa['id'];
+                echo "<tr>";
+                echo "<td class='px-2 py-1 whitespace-nowrap text-center border border-gray-200'>$no</td>";
+                echo "<td class='px-2 py-1 whitespace-nowrap text-center border border-gray-200'>" . htmlspecialchars($siswa['nis']) . "</td>";
+                echo "<td class='px-2 py-1 whitespace-nowrap text-left font-medium text-gray-900 border border-gray-200'>" . htmlspecialchars($siswa['nama']) . "</td>";
 
-          $countH = $countS = $countI = $countA = 0;
+                $countH = $countS = $countI = $countA = 0;
 
-          for ($i = 1; $i <= $jumlahHari; $i++) {
-            // [DIUBAH] Ambil data dari array
-            $data_hari = $absensi[$sid][$i] ?? null;
+                // Loop per hari
+                for ($i = 1; $i <= $jumlahHari; $i++) {
+                    $tanggal = sprintf("%04d-%02d-%02d", $tahun, $bulan, $i);
+                    $day = date('w', strtotime($tanggal)); // 0 = Minggu, 2 = Selasa, 5 = Jumat
 
-            if ($data_hari['keterangan'] ?? '' == 'Terlambat') {
-              $val = 'HT'; // Data terlambat
-            } else {
-              $val = $data_hari['status'] ?? ''; // Ambil statusnya
-            }
+                    // Cek data absen
+                    $data_hari = $absensi[$sid][$i] ?? null;
+                    $val = $data_hari['status'] ?? ''; // Ambil status (H, S, I, A)
+                    
+                    // Tentukan tampilan sel
+                    if ($day == 5 || in_array($tanggal, $libur)) {
+                        // --- HARI LIBUR / MINGGU ---
+                        echo "<td class='bg-gray-100 text-red-600 font-bold text-center border border-gray-200'>L</td>";
+                        // Tidak menambah hitungan rekap
+                    } else if ($data_hari !== null) {
+                        // --- ADA DATA ABSENSI ---
+                        $class = 'font-bold text-center border border-gray-200';
+                        if ($val == 'H') {
+                             // Cek Terlambat
+                            if (($data_hari['keterangan'] ?? '') == 'Terlambat') {
+                                echo "<td class='$class text-green-600'>H<span class='text-red-500'>T</span></td>";
+                            } else {
+                                echo "<td class='$class text-green-600'>H</td>";
+                            }
+                            $countH++;
+                        } elseif ($val == 'A') {
+                            echo "<td class='$class text-red-600'>A</td>";
+                            $countA++;
+                        } elseif ($val == 'S') {
+                            echo "<td class='$class text-yellow-600'>S</td>";
+                            $countS++;
+                        } elseif ($val == 'I') {
+                            echo "<td class='$class text-blue-600'>I</td>";
+                            $countI++;
+                        } else {
+                            // Status lain (jika ada)
+                            echo "<td class='$class text-gray-500'>?</td>";
+                        }
+                    } else if ($tanggal > $tanggal_hari_ini) {
+                        // --- TANGGAL DI MASA DEPAN ---
+                        echo "<td class='text-center border border-gray-200'></td>";
 
+                    } else {
+                        // --- TIDAK ADA DATA & BUKAN HARI LIBUR (DEFAULT ALPHA) ---
+                        // [PERBAIKAN] Beri nilai A jika kosong & bukan libur
+                        echo "<td class='font-bold text-red-600 text-center border border-gray-200'>A</td>";
+                        $countA++; // Tambah hitungan Alpha
+                    }
+                } // End loop hari
 
-            $tanggal = "$tahun-" . str_pad($bulan, 2, '0', STR_PAD_LEFT) . "-" . str_pad($i, 2, '0', STR_PAD_LEFT);
-            $day = date('w', strtotime($tanggal));
-
-            if ($val == '') {
-
-              if (
-                $day == 5 // [FIX] Dikembalikan ke logika Jumat (5) $day == 5 untuk libur Jumat, 0 untuk Mingg, 1 untuk Senin, dst.
-                || in_array($tanggal, $libur)) {
-                echo "<td class='bg-gray-100 text-red-600 font-bold border border-gray-200'>&bull;</td>";
-              } else {
-                echo "<td class='bg-gray-50 border border-gray-200'></td>";
-              }
-            } else {
-              if ($val == 'H') {
-                echo "<td class='text-green-600 border border-gray-200'>&bull;</td>";
-                $countH++;
-              } elseif ($val == 'HT') {
-                // Ini akan otomatis menampilkan 'A' untuk yg lupa absen pulang
-                echo "<td class='text-green-600 font-bold border border-gray-200'>H<span class='text-red-600'>T</span></td>";
-                $countA++;
-              } elseif ($val == 'A') {
-                // Ini akan otomatis menampilkan 'A' untuk yg lupa absen pulang
-                echo "<td class='text-red-600 font-bold border border-gray-200'>A</td>";
-                $countA++;
-              } elseif ($val == 'S') {
-                echo "<td class='text-yellow-600 font-bold border border-gray-200'>S</td>";
-                $countS++;
-              } elseif ($val == 'I') {
-                echo "<td class='text-blue-600 font-bold border border-gray-200'>I</td>";
-                $countI++;
-              } else {
-                echo "<td>" . htmlspecialchars($val) . "</td>";
-              }
-            }
-          }
-
-          echo "<td class='text-center font-bold bg-green-50 border border-gray-200'>$countH</td>";
-          echo "<td class='text-center font-bold bg-yellow-50 border border-gray-200'>$countS</td>";
-          echo "<td class='text-center font-bold bg-blue-50 border border-gray-200'>$countI</td>";
-          echo "<td class='text-center font-bold bg-red-50 border border-gray-200'>$countA</td>";
-          echo "</tr>";
-          $no++;
-        }
-        if ($no == 1) { // Jika tidak ada siswa
-          echo "<tr><td colspan='" . (3 + $jumlahHari + 4) . "' class='text-center p-4 text-gray-500'>Tidak ada data siswa aktif di kelas ini.</td></tr>";
+                // Kolom Rekap
+                echo "<td class='text-center font-bold bg-green-50 border border-gray-200'>$countH</td>";
+                echo "<td class='text-center font-bold bg-yellow-50 border border-gray-200'>$countS</td>";
+                echo "<td class='text-center font-bold bg-blue-50 border border-gray-200'>$countI</td>";
+                echo "<td class='text-center font-bold bg-red-50 border border-gray-200'>$countA</td>";
+                echo "</tr>";
+                $no++;
+            } // End loop siswa
+        } else {
+            // Jika tidak ada siswa
+            echo "<tr><td colspan='" . (3 + $jumlahHari + 4) . "' class='text-center p-4 text-gray-500'>Tidak ada data siswa aktif" . ($kelas_int > 0 ? " di kelas ini" : "") . ".</td></tr>";
         }
         ?>
       </tbody>
+
     </table>
   </div>
   <div class="mt-10">

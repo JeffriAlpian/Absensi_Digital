@@ -40,6 +40,9 @@ switch ($halaman) {
   case 'siswa':
     $page_title = 'Data Siswa';
     break;
+  case 'guru':
+    $page_title = 'Data Guru';
+    break;
   case 'kelas':
     $page_title = 'Data Kelas';
     break;
@@ -212,16 +215,18 @@ switch ($halaman) {
       <nav class="flex-1 overflow-y-auto p-4">
         <ul class="flex flex-col gap-2">
           <?php
+
           // Definisikan semua item menu dan role yang boleh akses
           $menuItems = [
             // Menu Umum (Admin & Guru)
             ['page' => 'home',          'icon' => 'fa-home',                'text' => 'Dashboard',          'roles' => ['admin', 'guru']],
             ['page' => 'siswa',         'icon' => 'fa-user-graduate',       'text' => 'Data Siswa',         'roles' => ['admin', 'guru']],
+            ['page' => 'guru',         'icon' => 'fa-chalkboard-teacher',   'text' => 'Data Guru',         'roles' => ['admin', 'guru']],
             // ['page' => 'scan',          'icon' => 'fa-qrcode',              'text' => 'SCAN QR',            'roles' => ['admin', 'guru']],
             // ['page' => 'scan_wa',       'icon' => 'fa-qrcode',              'text' => 'SCAN QR + WA Manual', 'roles' => ['admin', 'guru']],
             ['page' => 'scan_wa_api',   'icon' => 'fa-qrcode',              'text' => 'SCAN QR',   'roles' => ['admin', 'guru']], // Guru mungkin perlu ini?
-            ['page' => 'tambah_rfid',   'icon' => 'fa-address-card',              'text' => 'Tambah RFID Siswa',   'roles' => ['admin']], 
-            ['page' => 'device_rfid',   'icon' => 'fa-desktop',             'text' => 'Tambah Device RFID',  'roles' => ['admin']], 
+            ['page' => 'tambah_rfid',   'icon' => 'fa-address-card',              'text' => 'Tambah RFID Siswa',   'roles' => ['admin']],
+            ['page' => 'device_rfid',   'icon' => 'fa-desktop',             'text' => 'Tambah Device RFID',  'roles' => ['admin']],
             ['page' => 'belum_absensi', 'icon' => 'fa-user-clock',          'text' => 'Siswa Belum Hadir',  'roles' => ['admin', 'guru']], // Ganti ikon
             ['page' => 'absensi',       'icon' => 'fa-clipboard-check',     'text' => 'Isi S/I/A',          'roles' => ['admin', 'guru']],
             ['page' => 'rekap_bulanan', 'icon' => 'fa-calendar-days',       'text' => 'Rekap Bulanan',      'roles' => ['admin', 'guru']],
@@ -310,6 +315,9 @@ switch ($halaman) {
           case 'siswa':
             include $app_path . 'siswa.php';
             break;
+          case 'guru':
+            include $app_path . 'guru.php';
+            break;
           case 'kelas':
             include $app_path . 'kelas.php';
             break;
@@ -324,6 +332,12 @@ switch ($halaman) {
             break;
           case 'tambah_rfid':
             include $app_path . 'tambah_rfid.php';
+            break;
+          case 'tambah_rfid_siswa':
+            include $app_path . 'tambah_rfid_siswa.php';
+            break;
+          case 'tambah_rfid_guru':
+            include $app_path . 'tambah_rfid_guru.php';
             break;
           case 'key_wa_sidobe':
             include $app_path . 'key_wa_sidobe.php';
@@ -381,6 +395,9 @@ switch ($halaman) {
             break;
           case 'import_siswa':
             include $app_path . 'import_siswa.php';
+            break;
+          case 'import_guru':
+            include $app_path . 'import_guru.php';
             break;
           case 'editprofil':
             include $app_path . 'editprofil.php';
@@ -599,6 +616,8 @@ switch ($halaman) {
     </main>
 
   </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {

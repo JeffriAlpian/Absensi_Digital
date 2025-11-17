@@ -4,17 +4,16 @@ $msg = ""; // Untuk notifikasi
 // Tambah wali kelas
 if (isset($_POST['tambah'])) {
     // [FIX] Baca 'id_kelas', bukan 'kelas'
-    $id_kelas = intval($_POST['id_kelas']); 
-    $nama_wali = mysqli_real_escape_string($conn, $_POST['nama_wali']);
-    $nip_wali = mysqli_real_escape_string($conn, $_POST['nip_wali']);
+    $id_kelas = intval($_POST['id_kelas']);
+    $id_guru = intval($_POST['id_guru']);
 
     // [FIX] Cek duplikat kelas
     $cek = mysqli_query($conn, "SELECT id FROM wali_kelas WHERE id_kelas=$id_kelas");
     if (mysqli_num_rows($cek) > 0) {
         $msg = "<div class='mb-4 p-4 bg-red-100 text-red-700 border border-red-400 rounded'>Gagal: Kelas tersebut sudah memiliki wali kelas.</div>";
     } else {
-        mysqli_query($conn, "INSERT INTO wali_kelas (id_kelas, nama_wali, nip_wali) 
-                             VALUES ($id_kelas, '$nama_wali', '$nip_wali')");
+        mysqli_query($conn, "INSERT INTO wali_kelas (id_kelas, id_guru) 
+                             VALUES ($id_kelas, '$id_guru')");
         echo "<script>window.location.href = '?page=wali_kelas';</script>";
         exit;
     }
@@ -25,15 +24,15 @@ if (isset($_POST['edit'])) {
     $id = intval($_POST['id']);
     // [FIX] Baca 'id_kelas', bukan 'kelas'
     $id_kelas = intval($_POST['id_kelas']);
-    $nama_wali = mysqli_real_escape_string($conn, $_POST['nama_wali']);
-    $nip_wali = mysqli_real_escape_string($conn, $_POST['nip_wali']);
+    $id_guru = intval($_POST['id_guru']);
+    
 
     // [FIX] Cek duplikat (pastikan tidak bentrok dengan ID lain)
     $cek = mysqli_query($conn, "SELECT id FROM wali_kelas WHERE id_kelas=$id_kelas AND id != $id");
      if (mysqli_num_rows($cek) > 0) {
         $msg = "<div class='mb-4 p-4 bg-red-100 text-red-700 border border-red-400 rounded'>Gagal: Kelas tersebut sudah dipegang oleh wali lain.</div>";
     } else {
-        mysqli_query($conn, "UPDATE wali_kelas SET id_kelas=$id_kelas, nama_wali='$nama_wali', nip_wali='$nip_wali' WHERE id=$id");
+        mysqli_query($conn, "UPDATE wali_kelas SET id_kelas=$id_kelas, id_guru='$id_guru' WHERE id=$id");
         echo "<script>window.location.href = '?page=wali_kelas';</script>";
         exit;
     }
@@ -49,11 +48,14 @@ if (isset($_GET['hapus'])) {
 }
 
 // [FIX] Query lebih spesifik untuk menghindari konflik nama kolom
-$waliList = mysqli_query($conn, "SELECT w.id, w.nama_wali, w.nip_wali, w.id_kelas, k.nama_kelas 
+$waliList = mysqli_query($conn, "SELECT w.id, g.nama, w.id_kelas, k.nama_kelas 
                                  FROM wali_kelas w 
+                                 JOIN guru g ON w.id_guru = g.id
                                  JOIN kelas k ON w.id_kelas = k.id 
                                  ORDER BY k.nama_kelas");
+
 $kelasList = mysqli_query($conn, "SELECT id, nama_kelas FROM kelas ORDER BY nama_kelas");
+$guruList = mysqli_query($conn, "SELECT id, nama FROM guru ORDER BY nama");
 
 // Helper class Tailwind
 $input_class = "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm";
@@ -69,7 +71,7 @@ $btn_class = "inline-flex items-center justify-center px-4 py-2 border border-tr
         <form method="post">
             <div class="flex flex-wrap -mx-2 space-y-4 md:space-y-0">
                 
-                <div class="w-full md:w-1/4 px-2">
+                <div class="w-full md:w-1/2 px-2">
                     <label for="id_kelas_tambah" class="block text-sm font-medium text-gray-700">Kelas</label>
                     <select id="id_kelas_tambah" name="id_kelas" class="<?= $input_class ?>" required>
                         <option value="">-- Pilih Kelas --</option>
@@ -81,16 +83,20 @@ $btn_class = "inline-flex items-center justify-center px-4 py-2 border border-tr
                         ?>
                     </select>
                 </div>
-                
+
                 <div class="w-full md:w-1/2 px-2">
-                    <label for="nama_wali_tambah" class="block text-sm font-medium text-gray-700">Nama Wali</label>
-                    <input type="text" id="nama_wali_tambah" name="nama_wali" class="<?= $input_class ?>" placeholder="Nama Wali" required>
+                    <label for="id_wali_tambah" class="block text-sm font-medium text-gray-700">Guru</label>
+                    <select id="id_wali_tambah" name="id_guru" class="<?= $input_class ?>" required>
+                        <option value="">-- Pilih Guru --</option>
+                        <?php
+                        mysqli_data_seek($guruList, 0); // Reset pointer
+                        while ($g = mysqli_fetch_assoc($guruList)) {
+                            echo "<option value='{$g['id']}'>" . htmlspecialchars($g['nama']) . "</option>";
+                        }
+                        ?>
+                    </select>
                 </div>
                 
-                <div class="w-full md:w-1/4 px-2">
-                    <label for="nip_wali_tambah" class="block text-sm font-medium text-gray-700">NIP Wali (Opsional)</label>
-                    <input type="text" id="nip_wali_tambah" name="nip_wali" class="<?= $input_class ?>" placeholder="NIP Wali">
-                </div>
             </div>
             
             <div class="mt-4">

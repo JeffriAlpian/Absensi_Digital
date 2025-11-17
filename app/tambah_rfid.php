@@ -1,187 +1,229 @@
 <?php
-// =======================
-//  KONEKSI & DATA AWAL
-// =======================
-if (!isset($conn) || !$conn) {
-    include_once 'app/config.php';
+// Pastikan hanya admin yang bisa akses
+if (($user_role ?? '') !== 'admin') {
+    echo "<p class='text-red-500 p-4'>Akses ditolak.</p>";
+    exit;
 }
 
-// Ambil daftar perangkat RFID
-$device = mysqli_query($conn, "SELECT id, rfid_name FROM rfid_model");
+// [DIUBAH] Ambil siswa yang BELUM ADA di tabel kartu_rfid
+$siswaResult = mysqli_query($conn, "SELECT s.id, s.nama, s.nisn 
+                                    FROM siswa s 
+                                    LEFT JOIN kartu_rfid r ON s.id = r.siswa_id 
+                                    WHERE s.status='aktif' AND r.id IS NULL 
+                                    ORDER BY s.nama");
 
-// Ambil daftar siswa
-$siswa = mysqli_query($conn, "SELECT id, nama FROM siswa ORDER BY nama ASC");
+// [DIUBAH] Ambil guru yang BELUM ADA di tabel kartu_rfid
+$guruResult = mysqli_query($conn, "SELECT g.id, g.nama, g.nip 
+                                  FROM guru g
+                                  LEFT JOIN kartu_rfid r ON g.id = r.guru_id
+                                  WHERE r.id IS NULL 
+                                  ORDER BY g.nama");
 
-// =======================
-//  TOMBOL AKSI (CRUD)
-// =======================
+// [BARU] Ambil daftar perangkat reader
+$deviceResult = mysqli_query($conn, "SELECT id, rfid_name FROM rfid_model ORDER BY rfid_name");
 
-// ---- Tambah Data ----
-if (isset($_POST['tambah'])) {
-    $siswa_id = mysqli_real_escape_string($conn, $_POST['siswa_id']);
-    $card_uid = mysqli_real_escape_string($conn, $_POST['card_uid']);
-    $device_id = mysqli_real_escape_string($conn, $_POST['device_id']);
+// (Opsional) Ambil data yang SUDAH terdaftar
+$siswaTerdaftarResult = mysqli_query($conn, "SELECT s.nama, s.nisn, r.uid 
+                                            FROM kartu_rfid r 
+                                            JOIN siswa s ON r.siswa_id = s.id 
+                                            ORDER BY s.nama");
+$guruTerdaftarResult = mysqli_query($conn, "SELECT g.nama, g.nip, r.uid 
+                                           FROM kartu_rfid r 
+                                           JOIN guru g ON r.guru_id = g.id 
+                                           ORDER BY g.nama");
 
-    $sql = "INSERT INTO kartu_rfid (siswa_id, uid, device_id)
-            VALUES ('$siswa_id', '$card_uid', '$device_id')";
-    if (mysqli_query($conn, $sql)) {
-        echo "<script>alert('✅ Kartu RFID berhasil ditambahkan!'); window.location='?page=tambah_rfid';</script>";
-        exit;
-    } else {
-        echo "<script>alert('❌ Gagal menambahkan kartu: " . mysqli_error($conn) . "');</script>";
-    }
+// Tangani pesan feedback dari proses simpan
+$status = $_GET['status'] ?? '';
+$pesan = '';
+$tipe_pesan = 'success';
+if ($status === 'sukses') { /* ... (logika pesan sukses) ... */
+    $nama = $_GET['nama'] ?? 'User';
+    $pesan = "Kartu RFID untuk <strong>" . htmlspecialchars($nama) . "</strong> berhasil didaftarkan.";
+} elseif ($status === 'gagal') { /* ... (logika pesan gagal) ... */
+    $error = $_GET['error'] ?? 'Terjadi kesalahan tak terduga.';
+    $pesan = "Gagal mendaftarkan kartu RFID. Error: " . htmlspecialchars($error);
+    $tipe_pesan = 'danger';
+} elseif ($status === 'duplikat') { /* ... (logika pesan duplikat) ... */
+    $uid = $_GET['uid'] ?? '';
+    $pesan = "Gagal mendaftarkan kartu RFID. UID <strong>" . htmlspecialchars($uid) . "</strong> sudah terdaftar.";
+    $tipe_pesan = 'danger';
 }
 
-// ---- Edit Data ----
-if (isset($_POST['update'])) {
-    $id = $_POST['id'];
-    $siswa_id = mysqli_real_escape_string($conn, $_POST['siswa_id']);
-    $card_uid = mysqli_real_escape_string($conn, $_POST['card_uid']);
-    $device_id = mysqli_real_escape_string($conn, $_POST['device_id']);
 
-    $sql = "UPDATE kartu_rfid 
-            SET siswa_id='$siswa_id', uid='$card_uid', device_id='$device_id'
-            WHERE id='$id'";
-    if (mysqli_query($conn, $sql)) {
-        echo "<script>alert('✅ Data RFID berhasil diperbarui!'); window.location='?page=tambah_rfid';</script>";
-        exit;
-    } else {
-        echo "<script>alert('❌ Gagal memperbarui: " . mysqli_error($conn) . "');</script>";
-    }
-}
-
-// ---- Hapus Data ----
-if (isset($_GET['hapus'])) {
-    $hapus_id = $_GET['hapus'];
-    if (mysqli_query($conn, "DELETE FROM kartu_rfid WHERE id='$hapus_id'")) {
-        echo "<script>alert('🗑️ Data RFID berhasil dihapus!'); window.location='?page=tambah_rfid';</script>";
-        exit;
-    } else {
-        echo "<script>alert('❌ Gagal menghapus: " . mysqli_error($conn) . "');</script>";
-    }
-}
-
-// =======================
-//  MODE EDIT (AMBIL DATA)
-// =======================
-$edit = null;
-if (isset($_GET['edit'])) {
-    $edit_id = $_GET['edit'];
-    $edit_query = mysqli_query($conn, "SELECT * FROM kartu_rfid WHERE id='$edit_id'");
-    if (mysqli_num_rows($edit_query) > 0) {
-        $edit = mysqli_fetch_assoc($edit_query);
-    }
-}
-
-$btn_warning = "bg-yellow-500 hover:bg-yellow-600 focus:ring-yellow-400";
-$btn_info = "bg-cyan-500 hover:bg-cyan-600 focus:ring-cyan-400";
 ?>
 
-<!-- =======================
-     FORM INPUT/EDIT
-======================= -->
-<form method="POST" class="flex flex-wrap gap-2 items-end">
-    <?php if ($edit): ?>
-        <input type="hidden" name="id" value="<?= $edit['id']; ?>">
+<div class="container py-4">
+
+    <header class="bg-success text-white p-4 rounded-3 shadow-sm mb-4">
+        <h1 class="h3 mb-0"><i class="fa-solid fa-id-card-clip me-2"></i> Registrasi Kartu RFID</h1>
+        <p class="mb-0">Daftarkan kartu RFID baru untuk Siswa dan Guru.</p>
+    </header>
+
+    <?php if ($pesan): /* ... (kode alert feedback) ... */ ?>
+        <div class="alert alert-<?= $tipe_pesan; ?> alert-dismissible fade show" role="alert">
+            <?= $pesan; ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+
     <?php endif; ?>
 
-    <!-- Pilih Siswa -->
-    <div class="px-2">
-        <label for="siswa" class="block text-sm font-medium text-gray-700">Siswa</label>
-        <select id="siswa" name="siswa_id" required
-            class="w-full mt-1 block px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm">
-            <option value="">-- Pilih Siswa --</option>
-            <?php while ($s = mysqli_fetch_assoc($siswa)) { ?>
-                <option value="<?= $s['id']; ?>" <?= ($edit && $edit['siswa_id'] == $s['id']) ? 'selected' : ''; ?>>
-                    <?= htmlspecialchars($s['nama']); ?>
-                </option>
-            <?php } ?>
-        </select>
-    </div>
+    <div class="row g-4">
 
-    <!-- UID -->
-    <div class="px-2">
-        <label for="uid" class="block text-sm font-medium text-gray-700">UID Kartu</label>
-        <input type="text" id="uid" name="card_uid" required
-            value="<?= $edit ? htmlspecialchars($edit['uid']) : ''; ?>"
-            placeholder="UID Kartu RFID"
-            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm">
-    </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fa-solid fa-user-graduate me-2"></i> Registrasi Siswa</h5>
+                </div>
+                <div class="card-body p-4">
+                    <form method="POST" action="app/simpan_rfid_baru.php" onsubmit="return validasiForm('formSiswa')">
+                        <input type="hidden" name="tipe" value="siswa">
 
-    <!-- Device -->
-    <div class="px-2">
-        <label for="device" class="block text-sm font-medium text-gray-700">Perangkat</label>
-        <select id="device" name="device_id" required
-            class="mt-1 block px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm">
-            <option value="">-- Pilih Perangkat --</option>
-            <?php
-            mysqli_data_seek($device, 0);
-            while ($d = mysqli_fetch_assoc($device)) { ?>
-                <option value="<?= $d['id']; ?>" <?= ($edit && $edit['device_id'] == $d['id']) ? 'selected' : ''; ?>>
-                    <?= htmlspecialchars($d['rfid_name']); ?>
-                </option>
-            <?php } ?>
-        </select>
-    </div>
+                        <div class="mb-3">
+                            <label for="selectSiswa" class="form-label fw-bold">Pilih Siswa</label>
+                            <select class="form-select" id="selectSiswa" name="user_id" required>
+                                <option value="" selected disabled>... Pilih Nama Siswa ...</option>
+                                <?php
+                                if ($siswaResult) {
+                                    while ($siswa = mysqli_fetch_assoc($siswaResult)) {
+                                        echo "<option value='{$siswa['id']}'>" . htmlspecialchars($siswa['nama']) . " (" . htmlspecialchars($siswa['nisn']) . ")</option>";
+                                    }
+                                }
+                                ?>
+                            </select>
+                            <div class="form-text">Hanya menampilkan siswa aktif yang belum punya kartu.</div>
+                        </div>
 
-    <!-- Tombol -->
-    <div class="px-2">
-        <?php if ($edit): ?>
-            <button type="submit" name="update"
-                class="bg-blue-600 hover:bg-blue-700 focus:ring-blue-500 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white focus:outline-none focus:ring-2 focus:ring-offset-2">
-                <i class="fa-solid fa-pen-to-square mr-2"></i>Update
-            </button>
-            <a href="?page=tambah_rfid"
-                class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md bg-gray-400 text-white hover:bg-gray-500">Batal</a>
-        <?php else: ?>
-            <button type="submit" name="tambah"
-                class="bg-green-600 hover:bg-green-700 focus:ring-green-500 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white focus:outline-none focus:ring-2 focus:ring-offset-2">
-                <i class="fa-solid fa-plus mr-2"></i>Simpan
-            </button>
-        <?php endif; ?>
-    </div>
-</form>
+                        <div class="mb-3">
+                            <label for="deviceSiswa" class="form-label fw-bold">Didaftarkan oleh Perangkat</label>
+                            <select class="form-select" id="deviceSiswa" name="device_id" required>
+                                <option value="" selected disabled>... Pilih Perangkat Reader ...</option>
+                                <?php
+                                if ($deviceResult) {
+                                    mysqli_data_seek($deviceResult, 0); // Reset pointer
+                                    while ($device = mysqli_fetch_assoc($deviceResult)) {
+                                        echo "<option value='{$device['id']}'>" . htmlspecialchars($device['rfid_name']) . "</option>";
+                                    }
+                                }
+                                ?>
+                            </select>
+                        </div>
 
-<!-- =======================
-     TABEL DATA
-======================= -->
-<div class="bg-white rounded-lg shadow-md overflow-hidden mt-4">
-    <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-100">
-                <tr class="text-center">
-                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Nama</th>
-                    <th class="px-4 py-3 text-xs font-bold text-gray-600 uppercase tracking-wider">UID</th>
-                    <th class="px-4 py-3 text-xs font-bold text-gray-600 uppercase tracking-wider">Perangkat</th>
-                    <th class="px-4 py-3 text-xs font-bold text-gray-600 uppercase tracking-wider">Aksi</th>
-                </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-                <?php
-                $q = mysqli_query($conn, "SELECT kr.*, s.nama AS nama_siswa, d.rfid_name AS device_name
-                                          FROM kartu_rfid kr
-                                          LEFT JOIN siswa s ON kr.siswa_id = s.id
-                                          LEFT JOIN rfid_model d ON kr.device_id = d.id
-                                          ORDER BY s.nama ASC");
-                if (mysqli_num_rows($q) == 0) {
-                    echo "<tr><td colspan='4' class='px-4 py-4 text-center text-gray-500'>Tidak ada data kartu RFID.</td></tr>";
-                }
-                while ($row = mysqli_fetch_assoc($q)) {
-                ?>
-                    <tr class="hover:bg-gray-50">
-                        <td class="px-4 py-2 text-sm text-gray-700"><?= htmlspecialchars($row['nama_siswa']); ?></td>
-                        <td class="px-4 py-2 text-sm text-gray-700"><?= htmlspecialchars($row['uid']); ?></td>
-                        <td class="px-4 py-2 text-sm text-gray-700"><?= htmlspecialchars($row['device_name']); ?></td>
-                        <td class="px-4 py-2 text-sm text-center space-x-2">
-                            <a href="?page=tambah_rfid&edit=<?= $row['id']; ?>"
-                                class="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md shadow-sm text-white <?= $btn_info ?>">Edit</a>
-                            <a href="?page=tambah_rfid&hapus=<?= $row['id']; ?>"
-                                class="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md shadow-sm text-white <?= $btn_warning ?>"
-                                onclick="return confirm('Yakin ingin menghapus kartu ini?')">Hapus</a>
-                        </td>
-                    </tr>
-                <?php } ?>
-            </tbody>
-        </table>
+                        <div class="mb-3">
+                            <label for="rfidSiswa" class="form-label fw-bold">Tempelkan Kartu RFID</label>
+                            <input type="text" class="form-control form-control-lg" id="rfidSiswa" name="uid"
+                                placeholder="UID Kartu akan muncul di sini..." required
+                                autocomplete="off" autofocus>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fa-solid fa-save me-2"></i> Simpan RFID Siswa
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-info text-dark">
+                    <h5 class="mb-0"><i class="fa-solid fa-chalkboard-user me-2"></i> Registrasi Guru</h5>
+                </div>
+                <div class="card-body p-4">
+                    <form method="POST" action="app/simpan_rfid_baru.php" onsubmit="return validasiForm('formGuru')">
+                        <input type="hidden" name="tipe" value="guru">
+
+                        <div class="mb-3">
+                            <label for="selectGuru" class="form-label fw-bold">Pilih Guru</label>
+                            <select class="form-select" id="selectGuru" name="user_id" required>
+                                <option value="" selected disabled>... Pilih Nama Guru ...</option>
+                                <?php
+                                if ($guruResult) {
+                                    while ($guru = mysqli_fetch_assoc($guruResult)) {
+                                        echo "<option value='{$guru['id']}'>" . htmlspecialchars($guru['nama']) . " (" . htmlspecialchars($guru['nip']) . ")</option>";
+                                    }
+                                }
+                                ?>
+                            </select>
+                            <div class="form-text">Hanya menampilkan guru yang belum punya kartu.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="deviceGuru" class="form-label fw-bold">Didaftarkan oleh Perangkat</label>
+                            <select class="form-select" id="deviceGuru" name="device_id" required>
+                                <option value="" selected disabled>... Pilih Perangkat Reader ...</option>
+                                <?php
+                                if ($deviceResult) {
+                                    mysqli_data_seek($deviceResult, 0); // Reset pointer
+                                    while ($device = mysqli_fetch_assoc($deviceResult)) {
+                                        echo "<option value='{$device['id']}'>" . htmlspecialchars($device['rfid_name']) . "</option>";
+                                    }
+                                }
+                                ?>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="rfidGuru" class="form-label fw-bold">Tempelkan Kartu RFID</label>
+                            <input type="text" class="form-control form-control-lg" id="rfidGuru" name="uid"
+                                placeholder="UID Kartu akan muncul di sini..." required
+                                autocomplete="off">
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-info btn-lg">
+                                <i class="fa-solid fa-save me-2"></i> Simpan RFID Guru
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Inisialisasi Select2 (Jika Anda menambahkannya)
+        // $('.form-select').select2({
+        //     theme: "bootstrap-5" // Jika pakai tema bootstrap 5 untuk select2
+        // });
+
+        // Pindahkan focus ke input RFID saat nama dipilih
+        const selectSiswa = document.getElementById('selectSiswa');
+        const rfidSiswa = document.getElementById('rfidSiswa');
+        const selectGuru = document.getElementById('selectGuru');
+        const rfidGuru = document.getElementById('rfidGuru');
+
+        if (selectSiswa) {
+            selectSiswa.addEventListener('change', function() {
+                rfidSiswa.focus();
+            });
+        }
+
+        if (selectGuru) {
+            selectGuru.addEventListener('change', function() {
+                rfidGuru.focus();
+            });
+        }
+    });
+
+    // Validasi sederhana agar UID tidak dikirim saat form di-submit oleh reader
+    function validasiForm(formId) {
+        let input;
+        if (formId === 'formSiswa') {
+            input = document.getElementById('rfidSiswa');
+        } else {
+            input = document.getElementById('rfidGuru');
+        }
+
+        // Cegah submit jika input RFID kosong (jika 'required' gagal)
+        if (input.value.trim() === "") {
+            alert('Harap tempelkan kartu RFID.');
+            input.focus();
+            return false;
+        }
+        return true;
+    }
+</script>

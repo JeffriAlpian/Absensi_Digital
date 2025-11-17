@@ -65,6 +65,14 @@ $pdf->AddPage();
 // index kartu total (0-based)
 $index = 0;
 
+if ($result === false || mysqli_num_rows($result) == 0) {
+    // Tidak ada data siswa
+    $pdf->SetFont('Arial', 'B', 16);
+    $pdf->Cell(0, 10, 'Tidak ada data siswa untuk dicetak.', 0, 1, 'C');
+    $pdf->Output('I', 'kartu_guru.pdf');
+    exit;
+}
+
 while ($data = mysqli_fetch_assoc($result)) {
     // Jika penuh satu halaman dan bukan pertama, buat halaman baru
     if ($index > 0 && $index % $cards_per_page == 0) {

@@ -63,7 +63,7 @@ if (isset($_SESSION['username'])) {
       <h1 class="text-xl font-bold text-green-700"><?= htmlspecialchars($nama_sekolah); ?></h1>
     </div>
 
-    <h2 class="text-2xl font-semibold text-center mb-5 text-gray-700">Login Absensi QR Code</h2>
+    <h2 class="text-2xl font-semibold text-center mb-5 text-gray-700">Login Absensi</h2>
 
     <div class="bg-green-50 border-l-4 border-green-500 text-green-700 p-3 mb-4 rounded-md text-sm">
       📌 <strong>Fokus Aplikasi:</strong> Mempermudah Administrasi Kesiswaan & mendukung Tupoksi Wali Kelas.
@@ -94,9 +94,9 @@ if (isset($_SESSION['username'])) {
 
   <div class="mt-6 text-center text-sm text-white">
     <a href="tentang.html" class="font-semibold hover:text-yellow-300 mx-2">Tentang</a> |
-    <a href="https://www.facebook.com/nirsinggih" class="font-semibold hover:text-yellow-300 mx-2">Kontak</a> |
-    <a href="https://pembatik.web.id/mZgS" class="font-semibold hover:text-yellow-300 mx-2">Unduh</a>
-    <div class="mt-1 text-xs opacity-80">Versi Aplikasi 4.00</div>
+    <a href="https://www.instagram.com/jeffrikw" target="_blank" class="font-semibold hover:text-yellow-300 mx-2">Kontak</a> |
+    <a href="https://jeffri.rf.gd/" class="font-semibold hover:text-yellow-300 mx-2">Unduh</a>
+    <div class="mt-1 text-xs opacity-80">Versi Aplikasi 1.00</div>
   </div>
 
   <script>

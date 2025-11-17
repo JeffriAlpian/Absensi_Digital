@@ -3,7 +3,7 @@
   <a href="dashboard.php" class="btn btn-secondary mb-3">← Kembali</a>
 
   <div id="reader" style="width: 100%"></div>
-  <div id="result" class="mt-3" style="max-height: 300px; overflow-y: auto;"></div>
+  <div id="result" class="mt-3 mb-10" style="max-height: 300px; overflow-y: auto;"></div>
 
   <!-- Suara beep -->
   <audio id="beepSound" src="app/beep.mp3" preload="auto"></audio>
@@ -36,7 +36,7 @@
 
       // Setelah 1 detik baru ambil data dari server
       setTimeout(() => {
-        fetch("app/rekam_absen_wa_api.php?nisn=" + encodeURIComponent(qrMessage))
+        fetch("app/rekam_absen_wa_api.php?id=" + encodeURIComponent(qrMessage))
           .then(res => res.json())
           .then(data => {
             // Hapus spinner
@@ -72,6 +72,7 @@
             spinner.remove();
             console.error("Error:", err);
             result.innerHTML += `<div class="alert alert-danger">Terjadi kesalahan koneksi.</div>`;
+  
           });
       }, 1000);
     }
@@ -79,7 +80,9 @@
     // Pengaturan scanner agar tidak terlalu sensitif
     let html5QrcodeScanner = new Html5QrcodeScanner(
       "reader",
-      { fps: 5, qrbox: 250, disableFlip: false },
+      { fps: 5,
+        qrbox: 250,
+        disableFlip: false },
       false
     );
     html5QrcodeScanner.render(onScanSuccess);

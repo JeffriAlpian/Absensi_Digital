@@ -37,12 +37,15 @@ if (isset($_POST['hapus_data_dengan_password'])) {
 
             // Kosongkan tabel
             $conn->query("TRUNCATE TABLE absensi");
+            $conn->query("TRUNCATE TABLE absensi_guru");
             $conn->query("TRUNCATE TABLE hari_libur");
             $conn->query("TRUNCATE TABLE siswa");
+            $conn->query("TRUNCATE TABLE guru");
             $conn->query("TRUNCATE TABLE kelas");
             $conn->query("TRUNCATE TABLE wali_kelas");
             
             $conn->query("DELETE FROM users WHERE role = 'siswa'");
+            $conn->query("DELETE FROM users WHERE role = 'guru'");
             
             $qr_files = glob('assets/qr/*.png');
             foreach($qr_files as $file){

@@ -17,13 +17,6 @@ $kelasFilter = isset($_GET['kelas']) ? trim($_GET['kelas']) : '';
 
 <div class="container">
 
-  <header class="bg-green-600 text-white p-4 mb-3 shadow-md relative text-center lg:text-center">
-    <button id="menu-toggle" class="lg:hidden absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-white">
-      <i class="fa-solid fa-bars fa-fw text-xl"></i>
-    </button>
-    <h1 class="text-2xl lg:text-3xl font-bold">Daftar Siswa Keluar</h1>
-  </header>
-
   <a href="?page=siswa" class="btn btn-secondary mb-3">← Kembali ke Siswa Aktif</a>
 
   <!-- Form Filter Kelas -->

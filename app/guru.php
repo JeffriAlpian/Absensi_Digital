@@ -1,27 +1,22 @@
 <?php
 require 'vendor/phpqrcode/qrlib.php';
 
-$msg = "";
-
 // Proses simpan (tambah baru)
 if (isset($_POST['simpan'])) {
-  $nis   = mysqli_real_escape_string($conn, $_POST['nis']);
-  $nisn  = mysqli_real_escape_string($conn, $_POST['nisn']);
+  $nip   = mysqli_real_escape_string($conn, $_POST['nip']);
   $nama  = mysqli_real_escape_string($conn, $_POST['nama']);
+  $jabatan  = mysqli_real_escape_string($conn, $_POST['jabatan']);
   $tempat_lahir  = mysqli_real_escape_string($conn, $_POST['tempat_lahir']);
   $tanggal_lahir  = mysqli_real_escape_string($conn, $_POST['tanggal_lahir']);
-  // [DIUBAH] Ambil id_kelas (angka)
-  $id_kelas = intval($_POST['id_kelas']);
   $no_wa = mysqli_real_escape_string($conn, $_POST['no_wa']);
 
-  // [DIUBAH] Simpan id_kelas, bukan 'kelas'
-  mysqli_query($conn, "INSERT INTO siswa (nis, nisn, nama, tempat_lahir, tanggal_lahir, id_kelas, no_wa, status) 
-                         VALUES ('$nis', '$nisn', '$nama', $tempat_lahir, $tanggal_lahir, $id_kelas, '$no_wa', 'aktif')");
+  mysqli_query($conn, "INSERT INTO guru (nip, nama, jabatan, tempat_lahir, tanggal_lahir, no_wa) 
+                         VALUES ('$nip', '$nama', '$jabatan', '$tempat_lahir', '$tanggal_lahir', '$no_wa')");
 
-  // Buat akun user untuk siswa
-  $username = $nisn;
-  $password = password_hash($nisn, PASSWORD_BCRYPT); // Diganti ke hash yang aman
-  $role     = 'siswa';
+  // Buat akun user untuk guru
+  $username = $nip;
+  $password = password_hash($nip, PASSWORD_BCRYPT); // Diganti ke hash yang aman
+  $role     = 'guru';
 
   $cek_user = mysqli_query($conn, "SELECT id FROM users WHERE username='$username' LIMIT 1");
   if (mysqli_num_rows($cek_user) == 0) {
@@ -32,87 +27,99 @@ if (isset($_POST['simpan'])) {
   // Generate QR Code
   $qr_dir = "assets/qr/";
   if (!is_dir($qr_dir)) mkdir($qr_dir, 0777, true);
-  QRcode::png($nisn, $qr_dir . "$nisn.png", QR_ECLEVEL_L, 4);
-  $msg = "Data siswa berhasil disimpan!";
+  QRcode::png($nip, $qr_dir . "$nip.png", QR_ECLEVEL_L, 4);
 
-  echo "<script>window.location.href = '?page=siswa';</script>";
+  echo "<script>window.location.href = '?page=guru';</script>";
   exit;
 }
 
 // Proses update data (edit)
 if (isset($_POST['update'])) {
   $id    = intval($_POST['id']);
-  $nis   = mysqli_real_escape_string($conn, $_POST['nis']);
-  $nisn  = mysqli_real_escape_string($conn, $_POST['nisn']);
+  $nip   = mysqli_real_escape_string($conn, $_POST['nip']);
   $nama  = mysqli_real_escape_string($conn, $_POST['nama']);
+  $jabatan  = mysqli_real_escape_string($conn, $_POST['jabatan']);
   $tempat_lahir  = mysqli_real_escape_string($conn, $_POST['tempat_lahir']);
   $tanggal_lahir  = mysqli_real_escape_string($conn, $_POST['tanggal_lahir']);
-  // [DIUBAH] Ambil id_kelas (angka)
-  $id_kelas = intval($_POST['id_kelas']);
   $no_wa = mysqli_real_escape_string($conn, $_POST['no_wa']);
 
-  $res_old = mysqli_query($conn, "SELECT nisn FROM siswa WHERE id=$id LIMIT 1");
+  $res_old = mysqli_query($conn, "SELECT nip FROM guru WHERE id=$id LIMIT 1");
   $old     = mysqli_fetch_assoc($res_old);
-  $old_nisn = $old['nisn'] ?? $nisn;
+  $old_nip = $old['nip'] ?? $nip;
 
   // Perbaiki query UPDATE: hilangkan koma ganda dan sertakan tempat/tanggal lahir
-  $update_sql = "UPDATE siswa
-                   SET nis='$nis',
-                       nisn='$nisn',
+  $update_sql = "UPDATE guru
+                   SET nip='$nip',
                        nama='$nama',
+                       jabatan='$jabatan',
                        tempat_lahir='$tempat_lahir',
                        tanggal_lahir='$tanggal_lahir',
-                       id_kelas=$id_kelas,
                        no_wa='$no_wa'
                  WHERE id=$id";
   mysqli_query($conn, $update_sql);
 
-  $new_password = password_hash($nisn, PASSWORD_BCRYPT); // Diganti ke hash yang aman
+  $new_password = password_hash($nip, PASSWORD_BCRYPT); // Diganti ke hash yang aman
   mysqli_query($conn, "UPDATE users 
-                         SET username='$nisn', nama='$nama', password='$new_password' 
-                         WHERE username='$old_nisn' AND role='siswa'");
+                         SET username='$nip', nama='$nama', password='$new_password' 
+                         WHERE username='$old_nip' AND role='guru'");
 
   $qr_dir = "assets/qr/";
   if (!is_dir($qr_dir)) mkdir($qr_dir, 0777, true);
 
-  // Hapus QR lama jika nisn berubah
-  if (!empty($old_nisn) && $old_nisn !== $nisn) {
-    $old_qr = $qr_dir . $old_nisn . '.png';
+  // Hapus QR lama jika nip berubah
+  if (!empty($old_nip) && $old_nip !== $nip) {
+    $old_qr = $qr_dir . $old_nip . '.png';
     if (file_exists($old_qr)) @unlink($old_qr);
   }
 
-  QRcode::png($nisn, $qr_dir . "$nisn.png", QR_ECLEVEL_L, 4);
-  $msg = "Data siswa berhasil diperbarui!";
+  QRcode::png($nip, $qr_dir . "$nip.png", QR_ECLEVEL_L, 4);
 
-  // echo "<script>window.location.href = '?page=siswa';</script>";
+  echo "<script>window.location.href = '?page=guru';</script>";
   exit;
 }
 
-if (isset($_GET['keluar'])) {
-  $id = intval($_GET['keluar']);
-  mysqli_query($conn, "UPDATE siswa SET status='keluar' WHERE id=$id");
-  $msg = "Siswa telah ditandai sebagai keluar/lulus.";
-  echo "<script>window.location.href = '?page=siswa';</script>";
+if(isset($_GET['hapus'])) {
+  $id = intval($_GET['hapus']);
+  // Hapus data guru
+  $res = mysqli_query($conn, "SELECT nip FROM guru WHERE id=$id LIMIT 1");
+  $data = mysqli_fetch_assoc($res);
+  $nip = $data['nip'] ?? '';
+
+  // Hapus entri terkait di tabel kartu_rfid dahulu (hindari constraint FK)
+  mysqli_query($conn, "DELETE FROM kartu_rfid WHERE guru_id = $id");
+  // Hapus data guru
+  mysqli_query($conn, "DELETE FROM guru WHERE id=$id");
+  // Hapus akun user terkait
+  mysqli_query($conn, "DELETE FROM users WHERE username='$nip' AND role='guru'");
+
+  // Hapus file QR Code jika ada
+  $qr_file = "assets/qr/{$nip}.png";
+  if (file_exists($qr_file)) {
+    @unlink($qr_file);
+  }
+
+  echo "<script>window.location.href = '?page=guru';</script>";
   exit;
 }
 
+// Proses generate akun untuk semua guru aktif yang belum punya akun
 if (isset($_POST['generate_akun'])) {
-  $q_siswa = mysqli_query($conn, "SELECT * FROM siswa WHERE status='aktif'");
-  $count = 0;
-  while ($siswa = mysqli_fetch_assoc($q_siswa)) {
-    $username = $siswa['nisn'];
-    $password = password_hash($siswa['nisn'], PASSWORD_BCRYPT); // Ganti ke hash yang aman
-    $nama     = $siswa['nama'];
-    $role     = 'siswa';
+  $res = mysqli_query($conn, "SELECT * FROM guru ORDER BY nama ASC");
+  while ($row = mysqli_fetch_assoc($res)) {
+    $username = $row['nip'];
+    $password = password_hash($row['nip'], PASSWORD_BCRYPT); // Diganti ke hash yang aman
+    $nama     = $row['nama'];
+    $role     = 'guru';
 
     $cek_user = mysqli_query($conn, "SELECT id FROM users WHERE username='$username' LIMIT 1");
     if (mysqli_num_rows($cek_user) == 0) {
       mysqli_query($conn, "INSERT INTO users (username, nama, password, role) 
                                VALUES ('$username', '$nama', '$password', '$role')");
-      $count++;
     }
   }
-  $msg = "Akun untuk $count siswa aktif berhasil digenerate.";
+
+  echo "<script>window.location.href = '?page=guru';</script>";
+  exit;
 }
 
 // Ambil data untuk edit jika ada
@@ -120,12 +127,9 @@ $edit_data = null;
 if (isset($_GET['edit'])) {
   $id = intval($_GET['edit']);
   // [DIUBAH] Query select * sudah otomatis mengambil id_kelas
-  $res = mysqli_query($conn, "SELECT * FROM siswa WHERE id=$id LIMIT 1");
+  $res = mysqli_query($conn, "SELECT * FROM guru WHERE id=$id LIMIT 1");
   $edit_data = mysqli_fetch_assoc($res);
 }
-
-// [BARU] Ambil daftar kelas dari tabel 'kelas' untuk dropdown
-$kelasList = mysqli_query($conn, "SELECT id, nama_kelas FROM kelas ORDER BY nama_kelas");
 
 // Helper untuk tombol Tailwind
 $btn_class = "inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white focus:outline-none focus:ring-2 focus:ring-offset-2";
@@ -136,52 +140,37 @@ $btn_dark = "bg-gray-800 hover:bg-gray-900 focus:ring-gray-700";
 $btn_danger_outline = "";
 $btn_success = "bg-blue-600 hover:bg-blue-700 focus:ring-blue-500"; // Sukses = Biru
 $btn_info = "bg-cyan-500 hover:bg-cyan-600 focus:ring-cyan-400";
-$btn_print = "bg-green-600 hover:bg-green-700 focus:ring-blue-500";
+$btn_print = "bg-green-600 hover:bg-green-700 focus:ring-blue-500"; 
 // Helper untuk input form
 $input_class = "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm";
 ?>
 
 <div class="flex-1 p-6">
 
-  <?php if ($msg): ?>
-    <?php
-
-    // Cek apakah pesan sukses atau error
-    $is_success = strpos($msg, 'berhasil') !== false || strpos($msg, 'green') !== false;
-    $alert_class = $is_success
-      ? 'bg-green-100 border border-green-400 text-green-700'
-      : 'bg-red-100 border border-red-400 text-red-700';
-    ?>
-    <div class="mb-6 px-4 py-3 rounded relative <?php echo $alert_class; ?>" role="alert">
-      <span class="block sm:inline"><?php echo strip_tags($msg); // Hapus span style lama 
-                                    ?></span>
-    </div>
-  <?php endif; ?>
-
   <?php if ($user_role === 'admin') : ?>
 
     <div class="bg-white p-6 rounded-lg shadow-md mb-6">
       <h2 class="text-xl font-bold text-gray-800 mb-4">
-        <?= $edit_data ? 'Edit Data Siswa' : 'Tambah Siswa Baru' ?>
+        <?= $edit_data ? 'Edit Data guru' : 'Tambah Guru Baru' ?>
       </h2>
-      <form method="POST" class="flex flex-wrap gap-2 -mx-2 space-y-4 md:space-y-0">
+      <form method="post" class="flex flex-wrap gap-2 -mx-2 space-y-4 md:space-y-0">
         <?php if ($edit_data): ?>
           <input type="hidden" name="id" value="<?= intval($edit_data['id']) ?>">
         <?php endif; ?>
 
         <div class="w-full md:w-1/3 px-2">
-          <label for="nis" class="block text-sm font-medium text-gray-700">NIS</label>
-          <input type="text" id="nis" name="nis" class="<?= $input_class ?>" placeholder="NIS" required value="<?= htmlspecialchars($edit_data['nis'] ?? '') ?>">
-        </div>
-
-        <div class="w-full md:w-1/3 px-2">
-          <label for="nisn" class="block text-sm font-medium text-gray-700">NISN</label>
-          <input type="number" id="nisn" name="nisn" class="<?= $input_class ?>" placeholder="NISN" required value="<?= htmlspecialchars($edit_data['nisn'] ?? '') ?>">
+          <label for="nip" class="block text-sm font-medium text-gray-700">NIP</label>
+          <input type="number" id="nip" name="nip" class="<?= $input_class ?>" placeholder="NIP" required value="<?= htmlspecialchars($edit_data['nip'] ?? '') ?>">
         </div>
 
         <div class="w-full md:w-1/3 px-2">
           <label for="nama" class="block text-sm font-medium text-gray-700">Nama Lengkap</label>
-          <input type="text" id="nama" name="nama" class="<?= $input_class ?>" placeholder="Nama Siswa" required value="<?= htmlspecialchars($edit_data['nama'] ?? '') ?>">
+          <input type="text" id="nama" name="nama" class="<?= $input_class ?>" placeholder="Nama guru" required value="<?= htmlspecialchars($edit_data['nama'] ?? '') ?>">
+        </div>
+
+        <div class="w-full md:w-1/3 px-2">
+          <label for="jabatan" class="block text-sm font-medium text-gray-700">Jabatan</label>
+          <input type="text" id="jabatan" name="jabatan" class="<?= $input_class ?>" placeholder="Jabatan" required value="<?= htmlspecialchars($edit_data['jabatan'] ?? '') ?>">
         </div>
 
         <div class="w-full md:w-1/3 px-2">
@@ -195,21 +184,6 @@ $input_class = "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md sh
         </div>
 
         <div class="w-1/2 md:w-1/6 px-2">
-          <label for="id_kelas" class="block text-sm font-medium text-gray-700">Kelas</label>
-          <select id="id_kelas" name="id_kelas" class="<?= $input_class ?>" required>
-            <option value="">-- Pilih Kelas --</option>
-            <?php
-            $current_kelas_id = $edit_data['id_kelas'] ?? 0;
-            mysqli_data_seek($kelasList, 0); // Reset pointer
-            while ($k = mysqli_fetch_assoc($kelasList)) {
-              $selected = ($k['id'] == $current_kelas_id) ? 'selected' : '';
-              echo "<option value='{$k['id']}' $selected>" . htmlspecialchars($k['nama_kelas']) . "</option>";
-            }
-            ?>
-          </select>
-        </div>
-
-        <div class="w-1/2 md:w-1/6 px-2">
           <label for="no_wa" class="block text-sm font-medium text-gray-700">No. WhatsApp</label>
           <input type="text" id="no_wa" name="no_wa" class="<?= $input_class ?>" placeholder="628xxxx" value="<?= htmlspecialchars($edit_data['no_wa'] ?? '') ?>">
         </div>
@@ -220,7 +194,7 @@ $input_class = "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md sh
               <button type="submit" name="update" class="<?= $btn_class ?> <?= $btn_warning ?> w-full">
                 <i class="fa-solid fa-save mr-2"></i>Update
               </button>
-              <a href="?page=siswa" class="<?= $btn_class ?> <?= $btn_secondary ?> w-full">Batal</a>
+              <a href="?page=guru" class="<?= $btn_class ?> <?= $btn_secondary ?> w-full">Batal</a>
             </div>
           <?php else: ?>
             <button type="submit" name="simpan" class="<?= $btn_class ?> <?= $btn_primary ?> w-full">
@@ -233,42 +207,39 @@ $input_class = "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md sh
 
   <?php endif; ?>
 
-
-
   <div class="flex flex-wrap gap-2 mb-6">
-    <form method="post" onsubmit="return confirm('Yakin ingin generate akun untuk semua siswa aktif yang belum punya akun?')">
+    <form method="post" onsubmit="return confirm('Yakin ingin generate akun untuk semua guru aktif yang belum punya akun?')">
       <?php if ($user_role === 'admin') : ?>
         <button type="submit" name="generate_akun" class="<?= $btn_class ?> <?= $btn_dark ?>">
-          <i class="fa-solid fa-bolt mr-2"></i>Generate Akun Siswa
+          <i class="fa-solid fa-bolt mr-2"></i>Generate Akun guru
         </button>
       <?php endif; ?>
     </form>
-    <a href="app/cetak_kartu.php" class="<?= $btn_class ?> <?= $btn_success ?>" target="_blank">
+
+    <a href="app/cetak_kartu_guru.php" class="<?= $btn_class ?> <?= $btn_success ?>" target="_blank">
       <i class="fa-solid fa-id-card mr-2"></i>Cetak Semua Kartu
     </a>
-    <a href="app/backdesigncard.pdf" class="<?= $btn_class ?> <?= $btn_success ?>" target="_blank">
+    <a href="app/backdesigncardguru.pdf" class="<?= $btn_class ?> <?= $btn_success ?>" target="_blank">
       <i class="fa-solid fa-download mr-2"></i>Unduh Desain Belakang Kartu
     </a>
     <?php if ($user_role === 'admin') : ?>
-      <a href="?page=import_siswa" class="<?= $btn_class ?> <?= $btn_success ?>">
+      <a href="?page=import_guru" class="<?= $btn_class ?> <?= $btn_success ?>">
         <i class="fa-solid fa-file-excel mr-2"></i>Import dari Excel
       </a>
-      <a href="?page=siswa_keluar" class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 bg-white text-red-600 border border-red-600 hover:bg-red-50">
-        <i class="fa-solid fa-user-minus mr-2"></i>Lihat Siswa Keluar
-      </a>
+      
     <?php endif; ?>
   </div>
 
 
   <div class="mb-4">
-    <label for="searchSiswa" class="sr-only">Cari Siswa</label>
+    <label for="searchguru" class="sr-only">Cari guru</label>
     <div class="relative rounded-md shadow-sm">
       <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
         <i class="fa-solid fa-search text-gray-400"></i>
       </div>
-      <input type="text" id="searchSiswa" name="searchSiswa"
+      <input type="text" id="searchguru" name="searchguru"
         class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-green-500 focus:border-green-500 sm:text-sm"
-        placeholder="Cari berdasarkan Nama, NIS, atau NISN...">
+        placeholder="Cari berdasarkan Nama, NIS, atau nip...">
     </div>
     <div id="loadingIndicator" class="mt-2 text-sm text-gray-500 hidden">
       <i class="fa-solid fa-spinner fa-spin mr-1"></i> Mencari...
@@ -281,10 +252,9 @@ $input_class = "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md sh
       <table class="min-w-full divide-y divide-gray-200">
         <thead class="bg-gray-100">
           <tr class="text-center">
-            <th class="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">NIS</th>
-            <th class="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">NISN</th>
+            <th class="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">NIP</th>
             <th class="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Nama</th>
-            <th class="px-4 py-3 text-xs font-bold text-gray-600 uppercase tracking-wider">Kelas</th>
+            <th class="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Jabatan</th>
             <th class="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">No WA</th>
             <th class="px-4 py-3 text-xs font-bold text-gray-600 uppercase tracking-wider">QR Code</th>
             <?php if ($user_role === 'admin'): ?>
@@ -293,18 +263,18 @@ $input_class = "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md sh
           </tr>
         </thead>
 
-        <tbody id="siswaTableBody" class="bg-white divide-y divide-gray-200">
-          <!-- Data siswa akan dimuat di sini melalui AJAX -->
+        <tbody id="guruTableBody" class="bg-white divide-y divide-gray-200">
+          <!-- Data guru akan dimuat di sini melalui AJAX -->
         </tbody>
-        
+
       </table>
     </div>
   </div>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const searchInput = document.getElementById('searchSiswa');
-      const tableBody = document.getElementById('siswaTableBody');
+      const searchInput = document.getElementById('searchguru');
+      const tableBody = document.getElementById('guruTableBody');
       const loadingIndicator = document.getElementById('loadingIndicator');
       let searchTimeout;
 
@@ -316,19 +286,19 @@ $input_class = "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md sh
         // Set timeout baru
         searchTimeout = setTimeout(() => {
           const searchTerm = searchInput.value.trim();
-          fetchSiswa(searchTerm);
+          fetchguru(searchTerm);
         }, 500); // Tunggu 500ms setelah user berhenti mengetik
       });
 
-      // Fungsi untuk mengambil data siswa via AJAX
-      function fetchSiswa(query) {
+      // Fungsi untuk mengambil data guru via AJAX
+      function fetchguru(query) {
         // Gunakan URLSearchParams untuk encoding yang aman
         const params = new URLSearchParams({
           q: query
         });
 
-        // Pastikan path ke cari_siswa.php benar
-        fetch(`app/siswa_cari.php?${params.toString()}`)
+        // Pastikan path ke cari_guru.php benar
+        fetch(`app/guru_cari.php?${params.toString()}`)
           .then(response => {
             if (!response.ok) {
               throw new Error('Network response was not ok');
@@ -348,6 +318,6 @@ $input_class = "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md sh
       }
 
       // Tampilkan data awal saat halaman dimuat (opsional, bisa hapus query awal di PHP jika ini dipakai)
-      fetchSiswa('');
+      fetchguru('');
     });
   </script>
